@@ -19,5 +19,11 @@ export default class GraphGenerator {
 
 export type Graph = {
     nodes: Settlement[],
-    connections: Settlement[][];
+    connections: Connection[];
+}
+
+export type Connection = {
+    settlement1: Settlement,
+    settlement2: Settlement,
+    weight: number
 }
