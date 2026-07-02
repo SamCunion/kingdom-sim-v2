@@ -1,0 +1,26 @@
+{
+  "name": "kingdom-sim-v2",
+  "version": "1.0.0",
+  "description": "Kingdom sim version 2 with graphs",
+  "homepage": "https://github.com/SamCunion/kingdom-sim-v2#readme",
+  "bugs": {
+    "url": "https://github.com/SamCunion/kingdom-sim-v2/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamCunion/kingdom-sim-v2.git"
+  },
+  "license": "GPL-3.0-only",
+  "author": "Sam Cunion",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "ts-loader": "^9.6.2",
+    "typescript": "^6.0.3",
+    "webpack": "^5.108.3",
+    "webpack-cli": "^7.1.0"
+  }
+}
