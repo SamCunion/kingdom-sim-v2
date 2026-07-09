@@ -41,26 +41,32 @@ class Main {
     public static Main(): void {
         console.log("Hello, World!");
 
-        let engine = new Engine(document.querySelector("main")!);
-
-        engine.Init({
-            height: 800,
-            width: 1200,
-            FPSCap: 60,
-            background: "#eaeaea"
-        })
-
-        const scene = new Scene(engine);
 
         //=============SETTINGS=============
         //define number of kingdoms
         const no_kingdoms = 6;
         //number of sub-cities (non capitals, still cities) each kingdom could have
-        const no_subcities = [2, 3];
+        const no_subcities = [2]; //[2, 3];
         //number of castles each kingdom could have
-        const no_castles = [3, 4];
-        //number of villages each city could have (TODO)
-        //const no_villages_city = [2, 3, 4];
+        const no_castles = [3]; //[3, 4];
+        //width of the display
+        const WINDOW_W = 1200;
+        //height of the display
+        const WINDOW_H = 800;
+        //graph generator seed
+        const GRAPH_SEED = Math.random();
+        //==================================
+
+        let engine = new Engine(document.querySelector("main")!);
+
+        engine.Init({
+            height: WINDOW_H,
+            width: WINDOW_W,
+            FPSCap: 60,
+            background: "#eaeaea"
+        })
+
+        const scene = new Scene(engine);
 
         //create kingdoms
         let kingdoms = [];
@@ -87,13 +93,14 @@ class Main {
         for (let kingdom of kingdoms) {
             //each kingdom needs a capital
             let name = this.getNewSettlementName();
-            let capital = new City(scene, name, kingdom, true);
+            let capital = new City(scene, name, true);
             kingdom.addSettlement(capital);
+
 
             //each kingdom needs some sub cities
             for (let i = 0; i < Utility.random.randItem(no_subcities); i++) {
                 let name = this.getNewSettlementName();
-                let city = new City(scene, name, kingdom);
+                let city = new City(scene, name);
                 kingdom.addSettlement(city);
             }
 
@@ -101,16 +108,18 @@ class Main {
             for (let i = 0; i < Utility.random.randItem(no_castles); i++) {
                 let name = this.getNewSettlementName();
                 let castle = new Castle(scene, name);
+                kingdom.addSettlement(castle);
             }
         }
 
         //create lords
 
         //create map graph
-        const graph_generator = new GraphGenerator(kingdoms);
-        const map_graph: Graph = graph_generator.Generate();
+        const graph_generator = new GraphGenerator(kingdoms, WINDOW_W, WINDOW_H);
+        const map_graph: Graph = graph_generator.Generate(GRAPH_SEED);
 
-
+        scene.show();
+        engine.Run();
     }
 
     /**

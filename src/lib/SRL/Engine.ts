@@ -230,6 +230,13 @@ export class Engine {
                 }
             })
 
+            //late updates
+            this.renderComponents.forEach((e) => {
+                if (e.LateUpdate && e.enabled) {
+                    e.LateUpdate(self.EngineStatusInfo);
+                }
+            })
+
             //makes sure any excess ms that has elapsed since the minimum time waited for new frame to be drawn is accounted for
             self.LastFrameTime = current_ms - (elapsed_since_last_call % desired_ms_per_frame);
         }
@@ -415,6 +422,14 @@ export class Engine {
      */
     public setCameraPos(position: Vector2) {
         this.cameraPosition = position;
+    }
+
+    /**
+     * Gets the engines rendering context
+     * @returns the engines rendering context
+     */
+    public getRenderingContext(): CanvasRenderingContext2D|null {
+        return this.ctx;
     }
 
 }

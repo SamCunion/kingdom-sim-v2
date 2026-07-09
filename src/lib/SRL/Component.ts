@@ -72,6 +72,16 @@ export abstract class Component {
     }
 
     /**
+     * Computes the component centrepoint pixel location in 2d space.
+     * @returns the centrepoint of the component
+     */
+    public getCentrePoint(): Vector2 {
+        let centreX = Math.floor(this.getLocation().x + this.getDimensions().x / 2);
+        let centreY = Math.floor(this.getLocation().y + this.getDimensions().y / 2);
+        return new Vector2(centreX, centreY);
+    }
+
+    /**
      * Determines if the given point falls within the bounds of the component
      * @param point the point to check
      */
@@ -170,6 +180,11 @@ export interface Component {
      * @param info information about the engine
      */
     FixedUpdate(info?: EngineInfo): void;
+    /**
+     * Code inside this block gets executed after every frame is drawn. Useful for rendering typical WebGL components after the frame is drawn.
+     * @param info information about the engine
+     */
+    LateUpdate(info?: EngineInfo): void;
     /**
      * Runs when the component is clicked on (highest z-index priority, blocking)
      * @param event mouse event

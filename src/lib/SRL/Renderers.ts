@@ -2,6 +2,7 @@ import { Component } from "./Component";
 import { Engine, EngineInfo } from "./Engine";
 import { Sprite } from "./Sprite";
 import { TextComponent } from "./TextComponent";
+import { LineComponent } from "./LineComponent";
 import { Vector2 } from "./Vector2";
 
 /**
@@ -13,7 +14,8 @@ export {
     SolidRenderer,
     SpriteRenderer,
     TextRenderer,
-    AnimationRenderer
+    AnimationRenderer,
+    LineRenderer
 }
 
 class NullRenderer implements Renderer {
@@ -114,6 +116,30 @@ class TextRenderer implements Renderer {
             component.getDimensions().x = new_metrics.width;
             component.getDimensions().y = new_metrics.actualBoundingBoxDescent - new_metrics.actualBoundingBoxAscent;
         }
+    }
+}
+
+class LineRenderer implements Renderer {
+
+    Render(ctx: CanvasRenderingContext2D, component: LineComponent, cameraPos: Vector2): void {
+        let x1 = component.bundleMaster ? component.getLineBegin().x + component.bundleMaster.getLocation().x : component.getLineBegin().x;
+        let y1 = component.bundleMaster ? component.getLineBegin().y + component.bundleMaster.getLocation().y : component.getLineBegin().y;
+        x1 = component.static ? x1 : x1 - cameraPos.x;
+        y1 = component.static ? y1 : y1 - cameraPos.y;
+
+        let x2 = component.bundleMaster ? component.getLineEnd().x + component.bundleMaster.getLocation().x : component.getLineEnd().x;
+        let y2 = component.bundleMaster ? component.getLineEnd().y + component.bundleMaster.getLocation().y : component.getLineEnd().y;
+        x2 = component.static ? x2 : x2 - cameraPos.x;
+        y2 = component.static ? y2 : y2 - cameraPos.y;
+
+        ctx.lineWidth = component.getLineWidth();
+        ctx.strokeStyle = component.getColour();
+        ctx.lineCap = component.getCap();
+        ctx.setLineDash([component.getLineDashLength(), component.getLineGapLength()]);
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
     }
 }
 

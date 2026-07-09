@@ -2,12 +2,14 @@
  * Kingdom class holds data on the distinct kingdoms. Each settlement or lord is linked to a kingdom.
  */
 
+import City from "./City";
 import { Utility } from "./lib/SRL";
 import Settlement from "./Settlement";
 
 export default class Kingdom {
 
     private readonly name: string;
+    private capital: City|null = null;
     private readonly colour: string;
     private settlements: Settlement[] = [];
 
@@ -40,6 +42,9 @@ export default class Kingdom {
         }
         this.settlements.push(settlement);
         settlement.setKingdom(this);
+        if (settlement instanceof City && settlement.isCapital && this.capital == null) {
+            this.capital = settlement;
+        }
         return true;
     }
     /**
@@ -54,6 +59,22 @@ export default class Kingdom {
         }
         Utility.array.removeItem(this.settlements, settlement);
         return true;
+    }
+
+    /**
+     * Returns the original capital of the kingdom
+     * @returns the capital city
+     */
+    public getCapital(): City {
+        return this.capital!;
+    }
+
+    /**
+     * Gets the list of settlements that the kingdom owns
+     * @returns the settlements currently associated with the kingdom
+     */
+    public getOwnedSettlements(): Settlement[] {
+        return this.settlements;
     }
 
 }
