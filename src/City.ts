@@ -8,7 +8,11 @@ import Settlement from "./Settlement";
 
 export default class City extends Settlement {
 
+    public override node_id = "city";
+
     public readonly isCapital: boolean;
+
+    private static cities : City[] = [];
 
     constructor(scene: Scene, name: string, capital?: boolean) {
         super(scene, name);
@@ -20,6 +24,17 @@ export default class City extends Settlement {
         else {
             this.setDimensions(new Vector2(20, 20));
         }
+
+        City.cities.push(this);
+    }
+
+    //STATIC METHODS
+    /**
+     * Returns the list of cities
+     * @returns the complete list of cities
+     */
+    public static getCities(): City[] {
+        return this.cities;
     }
 
 }

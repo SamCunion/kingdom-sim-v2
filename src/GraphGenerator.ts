@@ -1,7 +1,8 @@
+import Battlefield from "./Battlefield";
 import Castle from "./Castle";
 import City from "./City";
 import Kingdom from "./Kingdom";
-import {Utility, Vector2} from "./lib/SRL";
+import {Scene, Utility, Vector2} from "./lib/SRL";
 import Settlement from "./Settlement";
 
 export default class GraphGenerator {
@@ -14,14 +15,12 @@ export default class GraphGenerator {
         this.area = new Vector2(pxWidth, pxHeight);
     }
 
-    public Generate(seed: number): Graph {
+    public Generate(seed: number, scene: Scene): boolean {
 
         //new instance of a seeded random number generator to ensure repeatable graphs
         const random = new Utility.random.SeededRandomNG(String(seed));
 
         console.log(`Beginning map generation with seed ${String(seed)}`)
-
-        const all_settlements = Settlement.getSettlements();
 
         //get starting locations for each kingdom
         let start_locations = [];
@@ -96,6 +95,8 @@ export default class GraphGenerator {
                 }
             }
         }
+
+        console.log("Populated map with cities");
         
         //each kingdom needs a set of castles
         for (let kingdom of this.kingdoms) {
@@ -122,10 +123,141 @@ export default class GraphGenerator {
             }
         }
 
-        return {
-            nodes: [],
-            connections: []
+        console.log("Populated map with castles");
+
+        //connections
+
+        //for each kingdom
+        for (let kingdom of this.kingdoms) {
+            //connect each city owned by the kingdom
+            for (let i of kingdom.getCities()) {
+                for (let j of kingdom.getCities()) {
+                    if (i !== j && !i.getConnection(j)) {
+                        i.addConnection(j);
+                    }
+                }
+            }
+
+            //connect castles to their closest city
+            for (let i of kingdom.getCastles()) {
+                let closest_city;
+                let closest_dist = Infinity;
+                for (let j of kingdom.getCities()) {
+                    if (j.distanceTo(i) < closest_dist) {
+                        closest_dist = j.distanceTo(i);
+                        closest_city = j;
+                    }
+                }
+                i.addConnection(closest_city!);
+            }
         }
+
+        console.log("Connected cities and castles");
+
+        //connect each settlement to the closest enemy settlement
+        for (let s of Settlement.getSettlements()) {
+            let closest;
+            let closest_dist = Infinity;
+            for (let s2 of Settlement.getSettlements()) {
+                if (s.getKingdom() !== s2.getKingdom() && s.distanceTo(s2) < closest_dist) {
+                    closest = s2;
+                    closest_dist = s.distanceTo(s2);
+                }
+            }
+            if (!s.getConnection(closest!)) {
+                s.addConnection(closest!);
+            }
+        }
+
+        console.log("Created some bridges between kingdoms");
+
+        //if multiple external connections to a settlement, only keep the closest one
+        for (let s of Settlement.getSettlements()) {
+            let settlement_conections = s.getConnections();
+            let external_connections = [];
+            for (let e_c of settlement_conections) {
+                if (e_c.settlement1.getKingdom() != e_c.settlement2.getKingdom()) {
+                    //is external connection
+                    external_connections.push(e_c);
+                }
+            }
+            let shortest;
+            let shortest_weight = Infinity;
+            for (let c of external_connections) {
+                if (c.weight < shortest_weight) {
+                    shortest = c;
+                    shortest_weight = c.weight;
+                }
+            }
+            for (let c of external_connections) {
+                if (c !== shortest) {
+                    s.removeConnection(c.settlement2);
+                }
+            }
+        }
+
+        console.log("Softened choke-points");
+
+        //create battlefields
+        /**
+         * Connections of longer distance than MAX_DIST are severed and instead now both link to a battlefield.
+         * Battlefields are linked to the two nodes that formed the original connection, as well as the next closest node.
+         */
+        const MAX_DIST = 200;
+        while (true) {
+            let bfs_created = 0;
+            let settlements = Settlement.getSettlements();
+            for (let settlement of settlements) {
+                let settlement_cons = settlement.getConnections();
+                for (let connection of settlement_cons) {
+                    if (connection.weight > MAX_DIST) {
+                        //need to place a battlefield
+                        //sever the connection
+                        connection.settlement1.removeConnection(connection.settlement2);
+                        //create new battlefield between them
+                        let bf = new Battlefield(scene, "battlefield");
+                        let x = Math.floor((connection.settlement1.getCentrePoint().x + connection.settlement2.getCentrePoint().x) / 2);
+                        let y = Math.floor((connection.settlement1.getCentrePoint().y + connection.settlement2.getCentrePoint().y) / 2);
+                        bf.setLocation(new Vector2(x, y));
+                        //connect the settlements to the battlefield
+                        connection.settlement1.addConnection(bf);
+                        connection.settlement2.addConnection(bf);
+                        //add a third connection to the next nearest node
+                        let nearest_node;
+                        let nearest_dist = Infinity;
+                        for (let test_settlement of Settlement.getSettlements()) {
+                            if (test_settlement !== connection.settlement1 && test_settlement !== connection.settlement2 && test_settlement !== bf) {
+                                if (bf.distanceTo(test_settlement) < nearest_dist) {
+                                    nearest_node = test_settlement;
+                                    nearest_dist = bf.distanceTo(test_settlement);
+                                }
+                            }
+                        }
+                        bf.addConnection(nearest_node!);
+                        bfs_created++;
+                    }
+                }
+            }
+
+            if (bfs_created == 0) {
+                //no new battlefields created on this itteration, all have been created
+                break;
+            }
+        }
+
+        console.log("Created battlefields");
+
+        //finally, check that the graph is complete. If so, return the graph, if not, return null.
+        let graph_connected = this.ensureGraphConnected();
+
+        if (graph_connected) {
+            console.log("Generated graph is valid!");
+        }
+        else {
+            console.log("Generated graph contains some isolated nodes. Might still be interesting!");
+        }
+
+        return graph_connected;
     }
 
 
@@ -142,8 +274,8 @@ export default class GraphGenerator {
         for (let i = 0; i < this.kingdoms.length; i++) {
             //compute the distance as the crow flies from the point to the kingdoms capital
             let trial_kingdom = this.kingdoms[i];
-            let dx = trial_kingdom.getCapital().getLocation().x - point.x;
-            let dy = trial_kingdom.getCapital().getLocation().y - point.y;
+            let dx = trial_kingdom.getCapital().getCentrePoint().x - point.x;
+            let dy = trial_kingdom.getCapital().getCentrePoint().y - point.y;
             let mag = dx * dx + dy * dy;
 
             //if the distance is closer than the previous closest, update
@@ -174,25 +306,43 @@ export default class GraphGenerator {
         }
 
         //finally, check if its new location causes it to collide with another settlement, if so, its invalid
-        let col = false;
         for (let s of Settlement.getSettlements()) {
             if (s !== settlement && settlement.collision(s).length > 0) {
-                col = true;
-                break;
+                return false;
             }
-        }
-        if (col) {
-            return false;
         }
 
         //location passes all tests
         return true;
     }
-}
 
-export type Graph = {
-    nodes: Settlement[],
-    connections: Connection[];
+    private ensureGraphConnected(): boolean {
+        let settlements = [...Settlement.getSettlements()];
+
+        //random starting place for graph traversal
+        let root = Utility.random.randItem(settlements);
+
+        //set it exploring the network
+        explore(root);
+
+        if (settlements.length > 0) {
+            //some nodes were left unvisited, the graph is not connected.
+            return false;
+        }
+
+        return true;
+
+        function explore(node: Settlement) {
+
+            //remove this from the list of settlements, as its been visited
+            Utility.array.removeItem(settlements, node);
+            for (let connection of node.getConnections()) {
+                if (settlements.includes(connection.settlement2)) {
+                    explore(connection.settlement2);
+                }
+            }
+        }
+    }
 }
 
 export type Connection = {

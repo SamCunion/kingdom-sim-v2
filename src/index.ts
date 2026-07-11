@@ -4,7 +4,7 @@
 
 import Castle from "./Castle";
 import City from "./City";
-import GraphGenerator, { Graph } from "./GraphGenerator";
+import GraphGenerator from "./GraphGenerator";
 import Kingdom from "./Kingdom";
 import {Engine, Scene, Utility} from "./lib/SRL";
 
@@ -116,7 +116,11 @@ class Main {
 
         //create map graph
         const graph_generator = new GraphGenerator(kingdoms, WINDOW_W, WINDOW_H);
-        const map_graph: Graph = graph_generator.Generate(GRAPH_SEED);
+        let graph_create_success = graph_generator.Generate(GRAPH_SEED, scene);
+
+        if (!graph_create_success) {
+            alert("The map generator has detected that some nodes are unreachable. Try generating a new map or this could have some interesting effects on the simulation!");
+        }
 
         scene.show();
         engine.Run();

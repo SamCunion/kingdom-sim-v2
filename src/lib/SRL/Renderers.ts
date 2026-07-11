@@ -111,7 +111,7 @@ class TextRenderer implements Renderer {
 
         //update h/w if required
         let new_metrics = ctx.measureText(component.getText());
-        if ((this.textmetric === undefined) || ((new_metrics.width !== this.textmetric!.width) || (new_metrics.actualBoundingBoxDescent - new_metrics.actualBoundingBoxAscent !== this.textmetric!.actualBoundingBoxDescent - this.textmetric!.actualBoundingBoxAscent))) {
+        if ((this.textmetric === null) || ((new_metrics.width !== this.textmetric!.width) || (new_metrics.actualBoundingBoxDescent - new_metrics.actualBoundingBoxAscent !== this.textmetric!.actualBoundingBoxDescent - this.textmetric!.actualBoundingBoxAscent))) {
             this.textmetric = new_metrics;
             component.getDimensions().x = new_metrics.width;
             component.getDimensions().y = new_metrics.actualBoundingBoxDescent - new_metrics.actualBoundingBoxAscent;

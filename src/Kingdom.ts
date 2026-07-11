@@ -2,6 +2,7 @@
  * Kingdom class holds data on the distinct kingdoms. Each settlement or lord is linked to a kingdom.
  */
 
+import Castle from "./Castle";
 import City from "./City";
 import { Utility } from "./lib/SRL";
 import Settlement from "./Settlement";
@@ -75,6 +76,34 @@ export default class Kingdom {
      */
     public getOwnedSettlements(): Settlement[] {
         return this.settlements;
+    }
+
+    /**
+     * Gets the list of cities currently owned by this kingdom
+     * @returns the list of cities
+     */
+    public getCities(): City[] {
+        let out = [];
+        for (let s of this.settlements) {
+            if (s instanceof City) {
+                out.push(s);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Gets the list of castles currently owned by this kingdom
+     * @returns the list of castles
+     */
+    public getCastles(): Castle[] {
+        let out = [];
+        for (let s of this.settlements) {
+            if (s instanceof Castle) {
+                out.push(s);
+            }
+        }
+        return out;
     }
 
 }
