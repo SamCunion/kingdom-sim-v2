@@ -47,7 +47,7 @@ function randGaussianInt(min: number, max: number, mean: number, standard_deviat
  * @param list the list
  * @returns random item in the list
  */
-function randItem(list: Array<any>): any {
+function randItem<T>(list: Array<T>): T {
     return list[randInt(0, list.length)];
 }
 
@@ -186,7 +186,7 @@ function removeCookie(name: string) {
  * @param index index of the item to be removed from it
  * @returns true if operation was successful, else false
  */
-function removeIndex(array: any[], index: number): boolean {
+function removeIndex<T>(array: T[], index: number): boolean {
     let out = array.splice(index, 1);
     if (out.length > 0) {
         return true;
@@ -247,7 +247,7 @@ function removeInstance(array: any[], instance: any): boolean {
  * @param array the array to shuffle
  * @returns the shuffled array
  */
-function shuffle(array: any[]): any[] {
+function shuffle<T>(array: T[]): T[] {
     let copy = [...array];
     let i = copy.length;
     while (i !== 0) {

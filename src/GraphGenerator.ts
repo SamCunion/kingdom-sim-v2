@@ -68,7 +68,7 @@ export default class GraphGenerator {
 
         //set the location of each kingdoms capital to the start location
         for (let i = 0; i < this.kingdoms.length; i++) {
-            this.kingdoms[i].getCapital().setLocation(start_locations[i]);
+            this.kingdoms[i].capital.setLocation(start_locations[i]);
         }
 
         //each kingdom needs to place their sub cities in the voronoi cell of the kingdom with respect to the capital
@@ -274,8 +274,8 @@ export default class GraphGenerator {
         for (let i = 0; i < this.kingdoms.length; i++) {
             //compute the distance as the crow flies from the point to the kingdoms capital
             let trial_kingdom = this.kingdoms[i];
-            let dx = trial_kingdom.getCapital().getCentrePoint().x - point.x;
-            let dy = trial_kingdom.getCapital().getCentrePoint().y - point.y;
+            let dx = trial_kingdom.capital.getCentrePoint().x - point.x;
+            let dy = trial_kingdom.capital.getCentrePoint().y - point.y;
             let mag = dx * dx + dy * dy;
 
             //if the distance is closer than the previous closest, update

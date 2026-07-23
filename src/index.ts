@@ -7,6 +7,8 @@ import City from "./City";
 import GraphGenerator from "./GraphGenerator";
 import Kingdom from "./Kingdom";
 import {Engine, Scene, Utility} from "./lib/SRL";
+import Lord from "./Lord";
+import Settlement from "./Settlement";
 
 let KINGDOM_NAMES = ["Nords", "Swadia", "Rhodoks", "Kergit", "Vaegirs", "Sarranid", "Aserai", "Battania", "Khuzait", "Sturgia", "Vlandia"];
 
@@ -113,6 +115,34 @@ class Main {
         }
 
         //create lords
+        const LORDS_PER_KINGDOM = 10;
+        for (let k of kingdoms) {
+            let settlements = k.getOwnedSettlements();
+            for (let i = 0; i < LORDS_PER_KINGDOM; i++) {
+                let lord;
+                if (i == 0) {
+                    //create king
+                    let name = this.getNewLordName();
+                    lord = new Lord(name, k, true);
+                }
+                else {
+                    //create lord
+                    let name = this.getNewLordName();
+                    lord = new Lord(name, k, false);
+                }
+
+                //set the lords "home" and move them there
+                if (i < settlements.length) {
+                    lord.home = settlements[i];
+                }
+                else {
+                    lord.home = k.capital;
+                }
+                lord.moveTo(lord.home);
+                lord.enterSettlement();
+            }
+        }
+        console.log("Created lords: ", Lord.getLords());
 
         //create map graph
         const graph_generator = new GraphGenerator(kingdoms, WINDOW_W, WINDOW_H);
@@ -124,6 +154,15 @@ class Main {
 
         scene.show();
         engine.Run();
+
+        //start the "game loop"
+        const TIME_BETWEEN_REEVALUATIONS = 1000;
+        const ACTION_LOOP = setInterval(() => {
+            const lords = Lord.getLords();
+            for (let i = 0; i < lords.length; i++) {
+                lords[i].Act();
+            }
+        }, TIME_BETWEEN_REEVALUATIONS);
     }
 
     /**

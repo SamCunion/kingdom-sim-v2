@@ -5,14 +5,16 @@
 import Castle from "./Castle";
 import City from "./City";
 import { Utility } from "./lib/SRL";
+import Lord from "./Lord";
 import Settlement from "./Settlement";
 
 export default class Kingdom {
 
-    private readonly name: string;
-    private capital: City|null = null;
-    private readonly colour: string;
+    public readonly name: string;
+    public capital!: City;
+    public readonly colour: string;
     private settlements: Settlement[] = [];
+    public lords: Lord[] = [];
 
     /**
      * @param name the kingdoms name
@@ -21,14 +23,6 @@ export default class Kingdom {
     constructor(name: string, colour: string) {
         this.name = name;
         this.colour = colour;
-    }
-
-    /**
-     * Gets the kingdom's colour
-     * @returns the colour in string rgb() format
-     */
-    public getColour(): string {
-        return this.colour;
     }
 
     /**
@@ -63,11 +57,17 @@ export default class Kingdom {
     }
 
     /**
-     * Returns the original capital of the kingdom
-     * @returns the capital city
+     * Adds a lord to the kingdom
+     * @param lord the lord to add to the kingdom
+     * @returns true if the operation was successful, else false
      */
-    public getCapital(): City {
-        return this.capital!;
+    public addLord(lord: Lord): boolean {
+        if (this.lords.includes(lord)) {
+            console.error("Error, tried to add a lord to a kingdom of which it already is a part of.", lord, this);
+            return false;
+        }
+        this.lords.push(lord);
+        return true;
     }
 
     /**

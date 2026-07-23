@@ -6,14 +6,19 @@ import { Connection } from "./GraphGenerator";
 import Kingdom from "./Kingdom";
 import {Component, Scene, SolidRenderer, TextComponent, Utility, Vector2} from "./lib/SRL";
 import { EngineInfo } from "./lib/SRL/Engine";
+import Lord from "./Lord";
 
 export default abstract class Settlement extends Component {
 
     private kingdom: Kingdom|null = null;
-    private name: string;
+    public name: string;
     private scene: Scene;
     private connections: Connection[] = [];
     private nametag: TextComponent|null = null;
+    public garrison: number = 0;
+    public garrison_lords: Lord[] = []; //garrison lords are INSIDE the settlement, defending/resting. Must be lords of the same kingdom as the settlement.
+    public field_lords: Lord[] = []; //field lords are OUTSIDE the settlement, can be lords of other kingdoms.
+    public besieged: boolean = false;
 
     public abstract node_id: string;
 
@@ -42,7 +47,7 @@ export default abstract class Settlement extends Component {
      * @param kingdom the new kingdom owner of the settlement
      */
     public setKingdom(kingdom: Kingdom): boolean {
-        this.Renderer = new SolidRenderer(kingdom.getColour());
+        this.Renderer = new SolidRenderer(kingdom.colour);
         this.kingdom = kingdom;
         return true;
     }
@@ -151,7 +156,7 @@ export default abstract class Settlement extends Component {
         for (let c of this.connections) {
             let colour = "black";
             if (c.settlement1.node_id != "battlefield" && c.settlement2.node_id !== "battlefield" && (c.settlement1.getKingdom() == c.settlement2.getKingdom())) {
-                colour = c.settlement1.getKingdom()!.getColour();
+                colour = c.settlement1.getKingdom()!.colour;
             }
 
             //draw
