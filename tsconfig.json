@@ -9,7 +9,8 @@
         "allowJs": true,
         "moduleResolution": "nodenext",
         "resolveJsonModule": true,
-        "esModuleInterop": true
+        "esModuleInterop": true,
+        "types": ["jquery"]
     },
     "include": [
         "./src/*.ts"

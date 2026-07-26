@@ -13,12 +13,16 @@ export default abstract class Settlement extends Component {
     private kingdom: Kingdom|null = null;
     public name: string;
     private scene: Scene;
+    private info_shown: boolean = false;
     private connections: Connection[] = [];
-    private nametag: TextComponent|null = null;
     public garrison: number = 0;
     public garrison_lords: Lord[] = []; //garrison lords are INSIDE the settlement, defending/resting. Must be lords of the same kingdom as the settlement.
     public field_lords: Lord[] = []; //field lords are OUTSIDE the settlement, can be lords of other kingdoms.
     public besieged: boolean = false;
+
+    //transition particle
+    private readonly TRANSITION_STEPS = 10; //number of frames the particle takes to travel from start to destination
+    private transitions: TransitionData[] = [];
 
     public abstract node_id: string;
 
@@ -122,6 +126,15 @@ export default abstract class Settlement extends Component {
         return Math.sqrt(dx * dx + dy * dy);
     }
 
+    /**
+     * Adds a "transition" particle that identifies a lords movement between settlements
+     * @param lord the lord making the transition
+     * @param destination the settlement the lord is moving to
+     */
+    public addTransitionParticle(lord: Lord, destination: Settlement): void {
+        this.transitions.push({start: this.getCentrePoint(), destination: destination.getCentrePoint(), step: 0, colour: lord.getKingdom().colour});
+    }
+
     //===STATIC METHODS===
     /**
      * Gets the list of all created settlements
@@ -137,16 +150,77 @@ export default abstract class Settlement extends Component {
 
 
     override Update(info?: EngineInfo): void {
-        if (this.isPointInComponent(info!.engine.getMousePoint(), info!.engine.getCameraPos()) && this.nametag == null) {
-            //create nametag
-            this.nametag = new TextComponent(this.scene);
-            this.nametag.setText(this.name);
-            this.nametag.setLocation(new Vector2(this.getLocation().x, this.getLocation().y + 25));
+        if (this.isPointInComponent(info!.engine.getMousePoint(), info!.engine.getCameraPos()) && !this.info_shown) {
+
+            //clear previous inspector
+            $("#garrison-list-container").empty();
+            $("#field-list-container").empty();
+
+            //populate inspector
+
+            $("#inspector-settlement-name").html(this.name);
+            if (this.getKingdom()) {
+                $("#inspector-settlement-name").css("color", this.getKingdom()!.colour);
+            }
+            else {
+                $("#inspector-settlement-name").css("color", "black");
+            }
+
+            //catalogue inhabitants by kingdom, for the garrison and field lords.
+
+            let field_lords: any = {};
+            for (let lord of this.field_lords) {
+                if (!field_lords[lord.getKingdom().name]) {
+                    field_lords[lord.getKingdom().name] = [];
+                }
+                field_lords[lord.getKingdom().name].push(lord);
+            }
+
+            //build the lists
+            if (this.node_id !== "battlefield") {
+                let container = $(`<div class="p-4" style="overflow-y: scroll"></div>`);
+                let colour = this.getKingdom()!.colour;
+                let list = $(`<ul></ul>`);
+                list.append(`<li style="color:${colour}">${this.garrison} - Garrison</li>`);
+                let kingdom_total = 0;
+                for (let lord of this.garrison_lords) {
+                    list.append(`<li style="color:${colour}">${lord.warband_size} - ${lord.name}</li>`);
+                    kingdom_total += lord.warband_size;
+                }
+                let title = $(`<h3 style="color:${colour}">${this.getKingdom()!.name}: ${kingdom_total}</h3>`);
+                container.append(title);
+                container.append(list);
+                $("#garrison-list-container").append(container);
+            }
+
+            for (let k_name of Object.keys(field_lords)) {
+                let container = $(`<div class="p-4"></div>`)
+                let lords: Lord[] = field_lords[k_name];
+                let colour = lords[0].getKingdom().colour;
+                let list = $(`<ul></ul>`);
+
+                let kingdom_total = 0;
+                for (let lord of lords) {
+                    list.append(`<li style="color:${colour}">${lord.warband_size} - ${lord.name}</li>`);
+                    kingdom_total += lord.warband_size;
+                }
+
+                let title = $(`<h3 style="color:${colour}">${k_name}: ${kingdom_total}</h3>`);
+                container.append(title);
+                container.append(list);
+                $("#field-list-container").append(container);
+            }
+
+            this.info_shown = true;
+            setTimeout(() => { //refresh after 1s
+                this.info_shown = false;
+            }, 1000)
         }
-        else if (this.nametag !== null && !this.isPointInComponent(info!.engine.getMousePoint(), info!.engine.getCameraPos())) {
-            //remove nametag
-            this.nametag.disable();
-            this.nametag = null;
+        else if (!this.isPointInComponent(info!.engine.getMousePoint(), info!.engine.getCameraPos()) && this.info_shown) {
+            this.info_shown = false;
+            $("#inspector-settlement-name").html("");
+            $("#garrison-list-container").empty();
+            $("#field-list-container").empty();
         }
     }
 
@@ -167,7 +241,26 @@ export default abstract class Settlement extends Component {
             ctx.strokeStyle = colour;
             ctx.stroke();
         }
+
+        //draw transition particles
+        for (let t of this.transitions) {
+            let loc = Utility.math.lerp(t.start, t.destination, t.step / this.TRANSITION_STEPS);
+            ctx.fillStyle = t.colour;
+            ctx.fillRect(loc.x - 5, loc.y - 5, 10, 10);
+
+            t.step++;
+            //this transition animation has completed, remove it
+            if (t.step == this.TRANSITION_STEPS) {
+                Utility.array.removeItem(this.transitions, t);
+            }
+        }
     }
+}
 
-
+//data structure for lord transition particles
+type TransitionData = {
+    start: Vector2,
+    destination: Vector2,
+    step: number,
+    colour: string
 }

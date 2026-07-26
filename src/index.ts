@@ -54,12 +54,12 @@ class Main {
         //width of the display
         const WINDOW_W = 1200;
         //height of the display
-        const WINDOW_H = 800;
+        const WINDOW_H = 900;
         //graph generator seed
         const GRAPH_SEED = Math.random();
         //==================================
 
-        let engine = new Engine(document.querySelector("main")!);
+        let engine = new Engine(document.querySelector("#app-container")!);
 
         engine.Init({
             height: WINDOW_H,
@@ -109,7 +109,7 @@ class Main {
             //each kingdom needs some castles
             for (let i = 0; i < Utility.random.randItem(no_castles); i++) {
                 let name = this.getNewSettlementName();
-                let castle = new Castle(scene, name);
+                let castle = new Castle(scene, name + " Castle");
                 kingdom.addSettlement(castle);
             }
         }

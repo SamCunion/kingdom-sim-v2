@@ -114,6 +114,8 @@ export default class Lord {
             }
             //remove the lord from their current location first
             Utility.array.removeItem(this.location.field_lords, this);
+            //show the transition animation
+            this.location.addTransitionParticle(this, settlement);
         }
         //then add them to the new settlement
         this.location = settlement;
