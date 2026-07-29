@@ -3,6 +3,7 @@ import { Connection } from "./GraphGenerator";
 import Kingdom from "./Kingdom";
 import { Utility } from "./lib/SRL";
 import Settlement from "./Settlement";
+import _ from "lodash";
 
 /**
  * A lord is an autonomous unit that partakes in campaigns and holds a warband
@@ -19,10 +20,24 @@ export default class Lord {
     public in_field: boolean = false; //whether the lord is currently outside (in_field) or inside (!in_field) the settlement.
     public home!: Settlement; //the settlement considered the lord's "home"
 
+    private dummyflag = 0;
+
     constructor(name: string, starting_kingdom: Kingdom, isKing: boolean = false) {
         this.name = name;
         this.is_king = isKing;
         this.setKingdom(starting_kingdom);
+
+        //starting units
+        let lord_starting_warband_range = [50, 100];
+        if (this.is_king) {
+            lord_starting_warband_range = [100, 150];
+            this.name = "King " + this.name;
+        }
+        else {
+            this.name = "Lord " + this.name;
+        }
+        this.warband_size = Utility.random.randInt(lord_starting_warband_range[0], lord_starting_warband_range[1], true);
+
         Lord.lords.push(this);
     }
 
@@ -35,8 +50,24 @@ export default class Lord {
             this.exitSettlement();
         }
         else {
-            let destination = Utility.random.randItem(this.location.getConnections()).settlement2;
-            this.moveTo(destination);
+            if (this.dummyflag == 0) {
+                let destination = Settlement.getSettlements()[0];
+                if (this.location == destination) {
+                    this.dummyflag = 1;
+                    return;
+                }
+                let nextNode = this.location.dijkstra(destination)[1];
+                this.moveTo(nextNode);
+            }
+            else {
+                let destination = this.findNearest("friendly");
+                if (this.location == destination) {
+                    this.dummyflag = 0;
+                    return;
+                }
+                let nextNode = this.location.dijkstra(destination)[1];
+                this.moveTo(nextNode);
+            }
         }
     }
 
@@ -121,6 +152,43 @@ export default class Lord {
         this.location = settlement;
         settlement.field_lords.push(this);
         return true;
+    }
+
+    public findNearest(target: "friendly"|"enemy"): Settlement {
+        if (target == "friendly") {
+            //if their current location is friendly, then its the closest.
+            if (this.location.getKingdom() == this.getKingdom()) {
+                return this.location;
+            }
+
+            let kingdom_settlements = this.kingdom.getOwnedSettlements();
+            let settlement_paths = [];
+            for (let s of kingdom_settlements) {
+                settlement_paths.push(this.location.dijkstra(s));
+            }
+            let closest = null;
+            let closest_length = Infinity;
+            for (let i = 0; i < settlement_paths.length; i++) {
+                //paths that include other friendly settlements cant be the closest
+                if (_.intersection(kingdom_settlements, settlement_paths[i]).length > 1) {
+                    continue;
+                }
+                let dist = 0;
+                for (let j = 0; j < settlement_paths[i].length - 1; j++) {
+                    let c = settlement_paths[i][j].getConnection(settlement_paths[i][j + 1]);
+                    dist += c!.weight;
+                }
+                if (closest_length > dist) {
+                    closest_length = dist;
+                    closest = kingdom_settlements[i];
+                }
+            }
+            return closest!;
+        }
+        else {
+            //dummy method for the time being
+            return Utility.random.randItem(Settlement.getSettlements());
+        }
     }
 
     /**

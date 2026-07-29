@@ -19,6 +19,7 @@ export default abstract class Settlement extends Component {
     public garrison_lords: Lord[] = []; //garrison lords are INSIDE the settlement, defending/resting. Must be lords of the same kingdom as the settlement.
     public field_lords: Lord[] = []; //field lords are OUTSIDE the settlement, can be lords of other kingdoms.
     public besieged: boolean = false;
+    private routing_table = new Map<Settlement, Settlement[]>;
 
     //transition particle
     private readonly TRANSITION_STEPS = 10; //number of frames the particle takes to travel from start to destination
@@ -135,6 +136,77 @@ export default abstract class Settlement extends Component {
         this.transitions.push({start: this.getCentrePoint(), destination: destination.getCentrePoint(), step: 0, colour: lord.getKingdom().colour});
     }
 
+    ///override method
+    public resetGarrison(): void {
+        console.error("Error, resetGarrison() called on a settlement that hasn't implemented their method.", this);
+    };
+
+    /**
+     * Gets the shortest path to the destination from this settlement.
+     * @param destination the destination settlement
+     * @returns a path of settlements, which should be taken to get to the destination
+     */
+    public dijkstra(destination: Settlement): Settlement[] {
+        //get from memory if already computed
+        if (this.routing_table.get(destination)) {
+            return this.routing_table.get(destination)!;
+        }
+        
+        //else, its not been computed before, compute it
+
+        console.log("dijkstra calculated");
+
+        let all_nodes = Settlement.getSettlements();
+        let dist = new Map();
+        let prev = new Map();
+        let visited = new Map();
+
+        for (let s of all_nodes) {
+            dist.set(s, Infinity);
+            prev.set(s, null);
+            visited.set(s, false);
+        }
+        dist.set(this, 0);
+
+        for (let i = 0; i < all_nodes.length; i++) {
+            let current = null;
+            let bestDist = Infinity;
+
+            for (let s of all_nodes) {
+                if (!visited.get(s) && dist.get(s) < bestDist) {
+                    bestDist = dist.get(s);
+                    current = s;
+                }
+            }
+
+            if (current === null) {
+                break;
+            }
+
+            visited.set(current, true);
+
+            for (let c of current.getConnections()) {
+                let newDist = dist.get(current) + c.weight;
+
+                if (newDist < dist.get(c.settlement2)) {
+                    dist.set(c.settlement2, newDist);
+                    prev.set(c.settlement2, current);
+                }
+            }
+        }
+
+        //reconstruct the path
+        let path = [];
+        let curr = destination;
+        while (curr !== null) {
+            path.push(curr);
+            curr = prev.get(curr);
+        }
+        path = path.reverse();
+        this.routing_table.set(destination, path);
+        return path;
+    }
+
     //===STATIC METHODS===
     /**
      * Gets the list of all created settlements
@@ -182,7 +254,7 @@ export default abstract class Settlement extends Component {
                 let colour = this.getKingdom()!.colour;
                 let list = $(`<ul></ul>`);
                 list.append(`<li style="color:${colour}">${this.garrison} - Garrison</li>`);
-                let kingdom_total = 0;
+                let kingdom_total = this.garrison;
                 for (let lord of this.garrison_lords) {
                     list.append(`<li style="color:${colour}">${lord.warband_size} - ${lord.name}</li>`);
                     kingdom_total += lord.warband_size;

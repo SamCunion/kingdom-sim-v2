@@ -9,7 +9,6 @@ export default class Battlefield extends Settlement {
 
     constructor(scene: Scene, name: string) {
         super(scene, name);
-
         this.setDimensions(new Vector2(20, 20));
 
         Battlefield.battlefields.push(this);

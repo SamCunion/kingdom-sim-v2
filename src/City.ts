@@ -2,7 +2,7 @@
  * Cities are settlements that can be sieged and can act as home bases of lords without a castle or city of their own.
  */
 import Kingdom from "./Kingdom";
-import { Scene, Vector2 } from "./lib/SRL";
+import { Scene, Utility, Vector2 } from "./lib/SRL";
 import { EngineInfo } from "./lib/SRL/Engine";
 import Settlement from "./Settlement";
 
@@ -25,7 +25,16 @@ export default class City extends Settlement {
             this.setDimensions(new Vector2(20, 20));
         }
 
+        this.resetGarrison();
         City.cities.push(this);
+    }
+
+    /**
+     * Resets the cities garrison back to within the predefined limits
+     */
+    public override resetGarrison(): void {
+        const garrison_limits = [200, 300];
+        this.garrison = Utility.random.randInt(garrison_limits[0], garrison_limits[1], true);
     }
 
     //STATIC METHODS
