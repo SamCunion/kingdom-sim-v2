@@ -7,6 +7,7 @@ import City from "./City";
 import { Utility } from "./lib/SRL";
 import Lord from "./Lord";
 import Settlement from "./Settlement";
+import War from "./War";
 
 export default class Kingdom {
 
@@ -15,6 +16,7 @@ export default class Kingdom {
     public readonly colour: string;
     private settlements: Settlement[] = [];
     public lords: Lord[] = [];
+    public wars: Array<War> = [];
 
     /**
      * @param name the kingdoms name

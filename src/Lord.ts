@@ -60,7 +60,7 @@ export default class Lord {
                 this.moveTo(nextNode);
             }
             else {
-                let destination = this.findNearest("friendly");
+                let destination = this.location.findNearest("friendly", this.kingdom);
                 if (this.location == destination) {
                     this.dummyflag = 0;
                     return;
@@ -152,43 +152,6 @@ export default class Lord {
         this.location = settlement;
         settlement.field_lords.push(this);
         return true;
-    }
-
-    public findNearest(target: "friendly"|"enemy"): Settlement {
-        if (target == "friendly") {
-            //if their current location is friendly, then its the closest.
-            if (this.location.getKingdom() == this.getKingdom()) {
-                return this.location;
-            }
-
-            let kingdom_settlements = this.kingdom.getOwnedSettlements();
-            let settlement_paths = [];
-            for (let s of kingdom_settlements) {
-                settlement_paths.push(this.location.dijkstra(s));
-            }
-            let closest = null;
-            let closest_length = Infinity;
-            for (let i = 0; i < settlement_paths.length; i++) {
-                //paths that include other friendly settlements cant be the closest
-                if (_.intersection(kingdom_settlements, settlement_paths[i]).length > 1) {
-                    continue;
-                }
-                let dist = 0;
-                for (let j = 0; j < settlement_paths[i].length - 1; j++) {
-                    let c = settlement_paths[i][j].getConnection(settlement_paths[i][j + 1]);
-                    dist += c!.weight;
-                }
-                if (closest_length > dist) {
-                    closest_length = dist;
-                    closest = kingdom_settlements[i];
-                }
-            }
-            return closest!;
-        }
-        else {
-            //dummy method for the time being
-            return Utility.random.randItem(Settlement.getSettlements());
-        }
     }
 
     /**

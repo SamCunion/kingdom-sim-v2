@@ -2,9 +2,10 @@
  * Settlement class defines default behaviour for different settlement types
  */
 
+import _ from "lodash";
 import { Connection } from "./GraphGenerator";
 import Kingdom from "./Kingdom";
-import {Component, Scene, SolidRenderer, TextComponent, Utility, Vector2} from "./lib/SRL";
+import {Component, Scene, SolidRenderer, Utility, Vector2} from "./lib/SRL";
 import { EngineInfo } from "./lib/SRL/Engine";
 import Lord from "./Lord";
 
@@ -154,8 +155,6 @@ export default abstract class Settlement extends Component {
         
         //else, its not been computed before, compute it
 
-        console.log("dijkstra calculated");
-
         let all_nodes = Settlement.getSettlements();
         let dist = new Map();
         let prev = new Map();
@@ -204,7 +203,140 @@ export default abstract class Settlement extends Component {
         }
         path = path.reverse();
         this.routing_table.set(destination, path);
+
+        console.log("dijkstra calculation");
+
         return path;
+    }
+
+    /**
+     * Finds the nearest friendly, or enemy settlement according to the given kingdom, form the settlement
+     * @param target specify whether it finds the nearest friendly, or enemy settlement
+     * @param kingdom the kingdom of interest
+     * @returns a settlement that fits the requirement
+     */
+    public findNearest(target: "friendly" | "enemy", kingdom: Kingdom): Settlement {
+        if (target == "friendly") {
+            //if their current location is friendly, then its the closest.
+            if (this.getKingdom() == kingdom) {
+                return this;
+            }
+
+            let kingdom_settlements = kingdom.getOwnedSettlements();
+            let settlement_paths = [];
+            for (let s of kingdom_settlements) {
+                settlement_paths.push(this.dijkstra(s));
+            }
+            let closest = null;
+            let closest_length = Infinity;
+            for (let i = 0; i < settlement_paths.length; i++) {
+                //paths that include other friendly settlements cant be the closest
+                if (_.intersection(kingdom_settlements, settlement_paths[i]).length > 1) {
+                    continue;
+                }
+                let dist = 0;
+                for (let j = 0; j < settlement_paths[i].length - 1; j++) {
+                    let c = settlement_paths[i][j].getConnection(settlement_paths[i][j + 1]);
+                    dist += c!.weight;
+                }
+                if (closest_length > dist) {
+                    closest_length = dist;
+                    closest = kingdom_settlements[i];
+                }
+            }
+            return closest!;
+        }
+        else {
+            let enemy_kingdoms = [];
+            if (target == "enemy") {
+                for (let w of kingdom.wars) {
+                    for (let i = 0; i < w.kingdoms.length; i++) {
+                        if (w.kingdoms[i] !== kingdom) {
+                            enemy_kingdoms.push(w.kingdoms[i]);
+                        }
+                    }
+                }
+            }
+
+            //get list of all enemy settlements
+            let enemy_settlements = [];
+            for (let enemy of enemy_kingdoms) {
+                for (let s of enemy.getOwnedSettlements()) {
+                    enemy_settlements.push(s);
+                }
+            }
+
+            let settlement_paths = [];
+            for (let s of enemy_settlements) {
+                settlement_paths.push(this.dijkstra(s));
+            }
+            let closest = null;
+            let closest_length = Infinity;
+            for (let i = 0; i < settlement_paths.length; i++) {
+                //paths that include other enemy settlements cant be the closest
+                if (_.intersection(enemy_settlements, settlement_paths[i]).length > 1) {
+                    continue;
+                }
+                let dist = 0;
+                for (let j = 0; j < settlement_paths[i].length - 1; j++) {
+                    let c = settlement_paths[i][j].getConnection(settlement_paths[i][j + 1]);
+                    dist += c!.weight;
+                }
+                if (closest_length > dist) {
+                    closest_length = dist;
+                    closest = enemy_settlements[i];
+                }
+            }
+            return closest!;
+        }
+    }
+
+    /**
+     * Finds a random settlement that is navegable to, without passing through other settlements of the target type.
+     * @param target specify whether it finds a close external (other kingdom, not at war) or close enemy (other kingdom, at war) settlement.
+     * @param kingdom the kingdom of interest
+     * @returns the settlement found, or null if no valid settlements exist
+     */
+    public findRandom(target: "external" | "enemy", kingdom: Kingdom): Settlement | null {
+        let current_loc: Settlement = this;
+        let enemy_kingdoms = [];
+        if (target == "enemy") {
+            for (let w of kingdom.wars) {
+                for (let i = 0; i < w.kingdoms.length; i++) {
+                    if (w.kingdoms[i] !== kingdom) {
+                        enemy_kingdoms.push(w.kingdoms[i]);
+                    }
+                }
+            }
+        }
+        for (let i = 0; i < 100000; i++) { //maximum 100,000 iterations until it fails
+            let choice = Utility.random.randItem(current_loc.getConnections()).settlement2;
+            if (target == "external" && choice.getKingdom() !== kingdom) { //valid external settlement found
+                if (choice.node_id !== "battlefield") {
+                    return choice;
+                }
+                else {
+                    current_loc = choice;
+                }
+            }
+            else if (target == "enemy") { //TODO: valid enemy settlement found
+                if (choice.node_id == "battlefield") {
+                    current_loc = choice;
+                }
+                else if (enemy_kingdoms.includes(choice.kingdom!)) {
+                    return choice;
+                }
+                else {
+                    current_loc = choice;
+                }
+            }
+            else { //not a valid settlement, continue to next iteration
+                current_loc = choice;
+            }
+        }
+
+        //valid settlement not found within given iterations, consider the condition invalid
+        return null;
     }
 
     //===STATIC METHODS===

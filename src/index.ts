@@ -9,6 +9,7 @@ import Kingdom from "./Kingdom";
 import {Engine, Scene, Utility} from "./lib/SRL";
 import Lord from "./Lord";
 import Settlement from "./Settlement";
+import WarHandler from "./WarHandler";
 
 let KINGDOM_NAMES = ["Nords", "Swadia", "Rhodoks", "Kergit", "Vaegirs", "Sarranid", "Aserai", "Battania", "Khuzait", "Sturgia", "Vlandia"];
 
@@ -152,16 +153,23 @@ class Main {
             alert("The map generator has detected that some nodes are unreachable. Try generating a new map or this could have some interesting effects on the simulation!");
         }
 
+        const WAR_HANDLER = new WarHandler(kingdoms);
+
         scene.show();
         engine.Run();
 
         //start the "game loop"
-        const TIME_BETWEEN_REEVALUATIONS = 1000;
+        const TIME_BETWEEN_REEVALUATIONS = 200;
         const ACTION_LOOP = setInterval(() => {
+
+            //lord actions
             const lords = Lord.getLords();
             for (let i = 0; i < lords.length; i++) {
                 lords[i].Act();
             }
+
+            //update wars
+            WAR_HANDLER.Step();
         }, TIME_BETWEEN_REEVALUATIONS);
     }
 
