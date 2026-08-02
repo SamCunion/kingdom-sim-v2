@@ -17,6 +17,7 @@ export default class Kingdom {
     private settlements: Settlement[] = [];
     public lords: Lord[] = [];
     public wars: Array<War> = [];
+    public current_target: Settlement|null = null;
 
     /**
      * @param name the kingdoms name

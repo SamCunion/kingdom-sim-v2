@@ -32,6 +32,10 @@ export default class WarHandler {
             console.error("Error: attempted to start a war between two kingdoms already at war", k1, k2);
             return false;
         }
+        else if (k1 == k2) {
+            console.error("Error: attempted to start a war between the same kingdom", k1);
+            return false;
+        }
         //create new war
         let war = new War(k1, k2);
         //add the war to each kingdoms instance

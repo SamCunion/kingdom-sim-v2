@@ -362,7 +362,7 @@ export default abstract class Settlement extends Component {
 
             //populate inspector
 
-            $("#inspector-settlement-name").html(this.name);
+            $("#inspector-settlement-name").html(this.besieged ? `${this.name} <i>(Besieged)</i>` : this.name);
             if (this.getKingdom()) {
                 $("#inspector-settlement-name").css("color", this.getKingdom()!.colour);
             }

@@ -19,8 +19,7 @@ export default class Lord {
     public location!: Settlement; //the settlement the lord is currently at
     public in_field: boolean = false; //whether the lord is currently outside (in_field) or inside (!in_field) the settlement.
     public home!: Settlement; //the settlement considered the lord's "home"
-
-    private dummyflag = 0;
+    public behaviour_state: LordBehaviour = LordBehaviour.RECOVER;
 
     constructor(name: string, starting_kingdom: Kingdom, isKing: boolean = false) {
         this.name = name;
@@ -45,30 +44,146 @@ export default class Lord {
      * Called when its time for the lord to act. Determines the lord's best action to take this "turn" and then acts upon it.
      */
     public Act(): void {
-        //dummy logic picks a random adjacent settlement and moves to it
-        if (!this.in_field) {
-            this.exitSettlement();
+        //determine overall behaviour state
+
+        //unlock locked behaviour types if not at war (war has just ended)
+        if ((this.behaviour_state == LordBehaviour.BATTLE || this.behaviour_state == LordBehaviour.SIEGE || this.behaviour_state == LordBehaviour.MILI_CAMPAIGN) && this.kingdom.wars.length == 0) {
+            this.behaviour_state = LordBehaviour.CAMPAIGN;
         }
-        else {
-            if (this.dummyflag == 0) {
-                let destination = Settlement.getSettlements()[0];
-                if (this.location == destination) {
-                    this.dummyflag = 1;
+
+        //if king, check if its time to start a military campaign
+        if (this.is_king && this.warband_size > 100 && this.kingdom.wars.length > 0 && this.behaviour_state == LordBehaviour.CAMPAIGN) {
+            let kingdom_lords = this.kingdom.lords;
+            let kingdom_lord_warbands = kingdom_lords.map(l => l.warband_size);
+            let kingdom_lord_warband_mean = _.mean(kingdom_lord_warbands);
+            if (kingdom_lord_warband_mean > 50) { //conditions satisfied, initiate the military campaign
+                //find campaign target
+                this.kingdom.current_target = this.location.findRandom("enemy", this.kingdom);
+
+                for (let l of this.kingdom.lords) { 
+                    if (l.behaviour_state == LordBehaviour.CAMPAIGN) {
+                        l.behaviour_state = LordBehaviour.MILI_CAMPAIGN;
+                    }
+                }
+            }
+        }
+
+        if (this.is_king && this.warband_size < 50) { //if king and warband size is less than 50, go home to recover
+            this.behaviour_state = LordBehaviour.RECOVER;
+        }
+        else if (this.warband_size < 25) { //if lord and warband size is less than 25, go home to recover
+            this.behaviour_state = LordBehaviour.RECOVER;
+        }
+        else if (this.behaviour_state !== LordBehaviour.MILI_CAMPAIGN && this.behaviour_state !== LordBehaviour.SIEGE && this.behaviour_state !== LordBehaviour.BATTLE) { //if the lord/king has enough troups, and not on a mili campaign, battle, or siege, they enter campaign mode
+            this.behaviour_state = LordBehaviour.CAMPAIGN;
+        }
+
+
+        switch (this.behaviour_state) {
+            case LordBehaviour.CAMPAIGN:
+                if (!this.in_field) {
+                    this.exitSettlement();
                     return;
                 }
-                let nextNode = this.location.dijkstra(destination)[1];
-                this.moveTo(nextNode);
-            }
-            else {
-                let destination = this.location.findNearest("friendly", this.kingdom);
-                if (this.location == destination) {
-                    this.dummyflag = 0;
-                    return;
+
+                let war_kingdoms = [];
+                for (let w of this.kingdom.wars) {
+                    if (w.kingdoms[0] !== this.kingdom) {
+                        war_kingdoms.push(w.kingdoms[0]);
+                    }
+                    else if (w.kingdoms[1] !== this.kingdom) {
+                        war_kingdoms.push(w.kingdoms[1]);
+                    }
                 }
-                let nextNode = this.location.dijkstra(destination)[1];
-                this.moveTo(nextNode);
-            }
+
+                //if not at war, path towards a random ally settlement
+                if (this.kingdom.wars.length == 0) {
+                    let rand_settlement = Utility.random.randItem(this.kingdom.getOwnedSettlements());
+                    if (rand_settlement !== this.location) {
+                        let pth = this.location.dijkstra(rand_settlement);
+                        this.moveTo(pth[1]);
+                        return;
+                    }
+                    else {
+                        return;
+                    }
+                }
+                else { //is at war, 
+                    //FIRST, check connected nodes, and run "worth joining battle" calculation. If a connection satisfies it, move to that node through the connection
+                    let current_node_vectors = this.location.getConnections();
+                    for (let v of current_node_vectors) {
+                        //sum enemies on that connection
+                        let enemy_warband_total = 0;
+                        for (let l of v.settlement2.field_lords) {
+                            if (war_kingdoms.includes(l.kingdom)) {
+                                enemy_warband_total += l.warband_size;
+                            }
+                        }
+                        //sum allies on current tile + connection
+                        let ally_warband_total = 0;
+                        for (let l of v.settlement2.field_lords) {
+                            if (l.kingdom == this.kingdom) {
+                                ally_warband_total += l.warband_size;
+                            }
+                        }
+                        for (let l of this.location.field_lords) {
+                            if (l.kingdom == this.kingdom) {
+                                ally_warband_total += l.warband_size;
+                            }
+                        }
+                        //if allies are greater than enemies, goto that connection
+                        if (ally_warband_total > enemy_warband_total) {
+                            this.moveTo(v.settlement2);
+                            return;
+                        }
+                    }
+
+                    //next, sum each enemy lord warbands on all connections. If the sum is greater than the ally warband sum on the current tile, flee.
+                    let ally_warband_total = 0;
+                    let enemy_warband_total = 0;
+                    for (let l of this.location.field_lords) {
+                        if (l.kingdom == this.kingdom) {
+                            ally_warband_total += l.warband_size;
+                        }
+                    }
+                    for (let v of current_node_vectors) {
+                        let v_l = v.settlement2.field_lords;
+                        for (let l of v_l) {
+                            if (war_kingdoms.includes(l.kingdom)) {
+                                enemy_warband_total += l.warband_size;
+                            }
+                        }
+                    }
+                    if (ally_warband_total < enemy_warband_total) { //flee
+                        let nearest_ally_settlement = this.location.findNearest("friendly", this.kingdom);
+                        let next_step = this.location.dijkstra(nearest_ally_settlement)[1];
+                        this.moveTo(next_step);
+                        return;
+                    }
+
+                    //if none of the above actions are valid, pick a random enemy settlement and move towards it.
+                    let rand_enemy_settlement = this.location.findRandom("enemy", this.kingdom);
+                    if (rand_enemy_settlement) {
+                        let next_step = this.location.dijkstra(rand_enemy_settlement)[1];
+                        this.moveTo(next_step);
+                        return;
+                    }
+                }
+                break;
+            case LordBehaviour.MILI_CAMPAIGN:
+                //path towards target
+                if (this.kingdom.current_target) {
+                    let next_hop = this.location.dijkstra(this.kingdom.current_target)[1];
+                    this.moveTo(next_hop);
+                    if (this.location == this.kingdom.current_target) {
+                        this.behaviour_state = LordBehaviour.SIEGE;
+                        if (!this.location.besieged) {
+                            this.location.besieged = true;
+                        }
+                    }
+                }
         }
+
     }
 
     /**
@@ -162,4 +277,12 @@ export default class Lord {
         return this.lords;
     }
 
+}
+
+enum LordBehaviour {
+    RECOVER = 0,
+    CAMPAIGN = 1,
+    MILI_CAMPAIGN = 2,
+    BATTLE = 3,
+    SIEGE = 4
 }
