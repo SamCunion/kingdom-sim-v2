@@ -23,7 +23,7 @@ export default class Castle extends Settlement {
      * Restocks the castles garrison back to the predetermined limits
      */
     public override resetGarrison(): void {
-        const garrison_size_limits = [100, 200];
+        const garrison_size_limits = [150, 250];
         this.garrison = Utility.random.randInt(garrison_size_limits[0], garrison_size_limits[1], true);
     }
 

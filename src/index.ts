@@ -7,7 +7,7 @@ import City from "./City";
 import GraphGenerator from "./GraphGenerator";
 import Kingdom from "./Kingdom";
 import {Engine, Scene, Utility} from "./lib/SRL";
-import Lord from "./Lord";
+import Lord, { LordBehaviour } from "./Lord";
 import Settlement from "./Settlement";
 import WarHandler from "./WarHandler";
 
@@ -134,13 +134,13 @@ class Main {
 
                 //set the lords "home" and move them there
                 if (i < settlements.length) {
-                    lord.home = settlements[i];
+                    lord.moveTo(settlements[i]);
+                    lord.enterSettlement();
                 }
                 else {
-                    lord.home = k.capital;
+                    lord.moveTo(k.capital);
+                    lord.enterSettlement();
                 }
-                lord.moveTo(lord.home);
-                lord.enterSettlement();
             }
         }
         console.log("Created lords: ", Lord.getLords());
@@ -167,6 +167,100 @@ class Main {
             for (let i = 0; i < lords.length; i++) {
                 lords[i].Act();
             }
+
+            //battle calculations
+            //for every location, for every war, determine if lords exist in a war. If so, do a battle calculation for that war.
+            for (let s of Settlement.getSettlements()) {
+                let active_kingdoms: Kingdom[] = [];
+                for (let l of s.field_lords) {
+                    if (!active_kingdoms.includes(l.getKingdom())) {
+                        active_kingdoms.push(l.getKingdom());
+                    }
+                }
+                for (let w of WAR_HANDLER.getWars()) {
+                    if (active_kingdoms.includes(w.kingdoms[0]) && active_kingdoms.includes(w.kingdoms[1])) {
+                        //both are here, initiate a battle and calculate fatalities for this step
+                        let side_a_lords = [];
+                        let side_a_sum = 0;
+                        let side_b_lords = [];
+                        let side_b_sum = 0;
+                        for (let l of s.field_lords) {
+                            if (l.getKingdom() == w.kingdoms[0]) {
+                                side_a_lords.push(l);
+                                side_a_sum += l.warband_size;
+                            }
+                            else if (l.getKingdom() == w.kingdoms[1]) {
+                                side_b_lords.push(l);
+                                side_b_sum += l.warband_size;
+                            }
+                        }
+
+                        //calculate fatalities
+                        let percentage_of_total_killed = Utility.random.randInt(10, 15, true);
+                        let n_killed_total = Math.ceil((percentage_of_total_killed / 100) * (side_a_sum + side_b_sum));
+                        
+                        //for each fatality
+                        for (let i = 0; i < n_killed_total; i++) {
+                            //determine which side the fatality should be on
+                            let randval = Utility.random.randInt(0, side_a_sum + side_b_sum, true);
+                            if (randval > side_a_sum) {
+                                //fatality on side A (inversed)
+                                let randval = Utility.random.randInt(0, side_a_sum, true);
+                                let sum = 0;
+                                for (let a_l of side_a_lords) {
+                                    sum += a_l.warband_size;
+                                    if (sum >= randval) {
+                                        a_l.warband_size--;
+                                        side_a_sum--;
+                                        break;
+                                    }
+                                }
+                            }
+                            else {
+                                //fatality on side B (inversed)
+                                let randval = Utility.random.randInt(0, side_b_sum, true);
+                                let sum = 0;
+                                for (let b_l of side_b_lords) {
+                                    sum += b_l.warband_size;
+                                    if (sum >= randval) {
+                                        b_l.warband_size--;
+                                        side_b_sum--;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        //check for dead lords, deadify them
+                        for (let l of side_a_lords.concat(side_b_lords)) {
+                            if (l.warband_size <= 0 && l.behaviour_state !== LordBehaviour.IMPRISONED) {
+                                l.warband_size = 0;
+                                if (Math.random() < 0.5) { //escape
+                                    let destination = Utility.random.randItem(l.getKingdom().getOwnedSettlements());
+                                    if (destination !== l.location) {
+                                        l.moveTo(destination);
+                                    }
+                                    l.enterSettlement();
+                                    console.log(`${l.name} has been defeated in battle but managed to escape.`);
+                                }
+                                else { //gulag
+                                    l.imprison_duration = 50;
+                                    l.behaviour_state = LordBehaviour.IMPRISONED;
+                                    if (side_a_lords[0].getKingdom() == l.getKingdom()) {
+                                        l.imprisoned_by = side_b_lords[0].getKingdom();
+                                    }
+                                    else {
+                                        l.imprisoned_by = side_a_lords[0].getKingdom();
+                                    }
+                                    console.log(`${l.name} has been taken prisoner`);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            //siege calculations
 
             //update wars
             WAR_HANDLER.Step();

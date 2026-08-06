@@ -22,6 +22,14 @@ export default class WarHandler {
     }
 
     /**
+     * Gets the list of ongoing wars
+     * @returns the list of wars
+     */
+    public getWars(): War[] {
+        return this.wars;
+    }
+
+    /**
      * Starts a war between two kingdoms
      * @param k1 the first kingdom
      * @param k2 the second kingdom
@@ -59,6 +67,15 @@ export default class WarHandler {
         if (!this.wars.includes(w)) {
             console.error("Error, attempted to make peace between two kingdoms not at war!", w, w.kingdoms);
             return false;
+        }
+        //remove sieges and targets
+        if (w.kingdoms[0].current_target?.getKingdom() == w.kingdoms[1]) {
+            w.kingdoms[0].current_target.besieged = false;
+            w.kingdoms[0].current_target = null;
+        }
+        if (w.kingdoms[1].current_target?.getKingdom() == w.kingdoms[0]) {
+            w.kingdoms[1].current_target.besieged = false;
+            w.kingdoms[1].current_target = null;
         }
         Utility.array.removeItem(this.wars, w);
         Utility.array.removeItem(w.kingdoms[0].wars, w);
@@ -134,9 +151,6 @@ export default class WarHandler {
                         let selected_index = 0;
                         let selected_total = 0;
                         for (let i = 0; i < this.kingdoms.length; i++) {
-                            if (this.kingdoms[i] == kingdom) {
-                                continue;
-                            }
                             let weight = fac_weights[i];
                             if (weight + selected_total > rand_val) {
                                 selected_index = i;
@@ -146,7 +160,7 @@ export default class WarHandler {
                         }
 
                         let war_decision = this.kingdoms[selected_index];
-                        if (!this.isAtWar(kingdom, war_decision)) {
+                        if (!this.isAtWar(kingdom, war_decision) && kingdom !== war_decision) {
                             this.declareWar(kingdom, war_decision, "enemy strength");
                         }
 

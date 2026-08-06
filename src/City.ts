@@ -33,7 +33,7 @@ export default class City extends Settlement {
      * Resets the cities garrison back to within the predefined limits
      */
     public override resetGarrison(): void {
-        const garrison_limits = [200, 300];
+        const garrison_limits = [300, 400];
         this.garrison = Utility.random.randInt(garrison_limits[0], garrison_limits[1], true);
     }
 

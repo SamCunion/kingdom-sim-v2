@@ -16,6 +16,7 @@ export default class Kingdom {
     public readonly colour: string;
     private settlements: Settlement[] = [];
     public lords: Lord[] = [];
+    public dungeon: Lord[] = [];
     public wars: Array<War> = [];
     public current_target: Settlement|null = null;
 
@@ -104,6 +105,23 @@ export default class Kingdom {
         for (let s of this.settlements) {
             if (s instanceof Castle) {
                 out.push(s);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Gets the list of kingdoms that this kingdom is currently at war with
+     * @returns the list of kingdoms
+     */
+    public getKingdomsAtWar(): Kingdom[] {
+        let out = [];
+        for (let w of this.wars) {
+            if (w.kingdoms[0] == this) {
+                out.push(w.kingdoms[1]);
+            }
+            else {
+                out.push(w.kingdoms[0]);
             }
         }
         return out;

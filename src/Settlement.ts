@@ -7,7 +7,7 @@ import { Connection } from "./GraphGenerator";
 import Kingdom from "./Kingdom";
 import {Component, Scene, SolidRenderer, Utility, Vector2} from "./lib/SRL";
 import { EngineInfo } from "./lib/SRL/Engine";
-import Lord from "./Lord";
+import Lord, { LordBehaviour } from "./Lord";
 
 export default abstract class Settlement extends Component {
 
@@ -339,6 +339,23 @@ export default abstract class Settlement extends Component {
         return null;
     }
 
+    /**
+     * Checks if there is a lord the given lord considers an advisary in the field.
+     * @param l the lord to check
+     * @returns true if there exists an adversary to the lord in the field, else false
+     */
+    public containsAdversary(l: Lord): boolean {
+        let wars = l.getKingdom().wars;
+        for (let w of wars) {
+            for (let other_lord of this.field_lords) {
+                if (other_lord !== l && other_lord.getKingdom() !== l.getKingdom() && w.kingdoms.includes(other_lord.getKingdom())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     //===STATIC METHODS===
     /**
      * Gets the list of all created settlements
@@ -388,8 +405,10 @@ export default abstract class Settlement extends Component {
                 list.append(`<li style="color:${colour}">${this.garrison} - Garrison</li>`);
                 let kingdom_total = this.garrison;
                 for (let lord of this.garrison_lords) {
-                    list.append(`<li style="color:${colour}">${lord.warband_size} - ${lord.name}</li>`);
-                    kingdom_total += lord.warband_size;
+                    if (lord.behaviour_state !== 5) {
+                        list.append(`<li style="color:${colour}">${lord.warband_size} - ${lord.name}</li>`);
+                        kingdom_total += lord.warband_size;
+                    }
                 }
                 let title = $(`<h3 style="color:${colour}">${this.getKingdom()!.name}: ${kingdom_total}</h3>`);
                 container.append(title);
@@ -418,7 +437,7 @@ export default abstract class Settlement extends Component {
             this.info_shown = true;
             setTimeout(() => { //refresh after 1s
                 this.info_shown = false;
-            }, 1000)
+            }, 200)
         }
         else if (!this.isPointInComponent(info!.engine.getMousePoint(), info!.engine.getCameraPos()) && this.info_shown) {
             this.info_shown = false;
