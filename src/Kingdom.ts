@@ -4,7 +4,7 @@
 
 import Castle from "./Castle";
 import City from "./City";
-import { Utility } from "./lib/SRL";
+import { Utility } from "./lib/TSRL";
 import Lord from "./Lord";
 import Settlement from "./Settlement";
 import War from "./War";
@@ -16,7 +16,6 @@ export default class Kingdom {
     public readonly colour: string;
     private settlements: Settlement[] = [];
     public lords: Lord[] = [];
-    public dungeon: Lord[] = [];
     public wars: Array<War> = [];
     public current_target: Settlement|null = null;
 

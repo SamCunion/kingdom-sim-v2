@@ -1,4 +1,4 @@
-import { Renderer, Scene, SolidRenderer, Vector2 } from "./lib/SRL";
+import { Renderer, Scene, SolidRenderer, Vector2 } from "./lib/TSRL";
 import Settlement from "./Settlement";
 
 export default class Battlefield extends Settlement {

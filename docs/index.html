@@ -6,19 +6,85 @@
     <title>Kingdom Sim v2</title>
     <style>
 
-        .SJRL2D_App {
-            left: 0;
-            top: 0;
+        main {
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            overflow: hidden;
+            background-color: #1e1b1b;
+            color: white;
         }
-
+        label {
+            -moz-user-select: none;
+            user-select: none;
+        }
+        #inspector-container {
+            width: 40%;
+            min-height: 100%;
+        }
+        #control-container {
+            min-height: 10%;
+        }
         #garrison-container {
-            border-right: 2px solid black;
+            border-right: 5px ridge rgb(255, 157, 0);
         }
-        #info-container {
-            border-left: 2px solid black;
+        #settlement-container {
+            min-height: 50%;
         }
-        li {
-            list-style: none;
+        #field-container {
+            min-width: 50%;
+        }
+        #field-list, #garrison-list {
+            overflow-y: scroll;
+        }
+        #kingdom-info-container {
+            min-height: 25%
+        }
+        #event-log-container {
+            min-height: 15%;
+            overflow-y: scroll;
+        }
+        #kingdom-selector {
+            border-right: 5px ridge rgb(255, 157, 0);
+            overflow-y: scroll;
+        }
+        #kingdom-info {
+            overflow-y: scroll;
+        }
+        #kingdom-list {
+            border-radius: 0%;
+        }
+        #kingdom-list li {
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            -moz-user-select: none;
+            background-color: #373636;
+        }
+        .active {
+            background-color: #636262 !important;
+            border-color: white !important;
+        }
+        .inspector-segment {
+            border-top: 5px ridge rgb(255, 157, 0);
+            border-right: 5px ridge rgb(255, 157, 0);
+            border-left: 5px ridge rgb(255, 157, 0);
+        }
+        .inspector-segment:last-of-type {
+            border-bottom: 5px ridge rgb(255, 157, 0);
+        }
+        .btn-play {
+            background-color: #a5ff81 !important;
+        }
+        .btn-play:hover, .btn-pause:hover {
+            color: #212529 !important;
+        }
+        .btn-pause {
+            background-color: #ff6b6b !important;
+        }
+        .btn-step {
+            background-color: #183ea5 !important;
+            color: white !important;
         }
 
     </style>
@@ -26,25 +92,48 @@
 </head>
 <body>
     <main class="d-flex">
-        <div id="app-container" class="w-100"></div>
-        <div id="info-container" class="w-100">
-            <div class="d-flex flex-column h-100">
-                <h1 class="text-center">Inspector</h1>
-                <h2 id="inspector-settlement-name" class="text-center"></h2>
-                <div class="d-flex flex-fill">
-                    <div id="garrison-container" class="w-50 d-flex flex-column">
-                        <h2 class="text-center">Garrison</h2>
-                        <div id="garrison-list-container" class="flex-fill">
+        <div id="app-container">
 
-                        </div>
+        </div>
+        <div id="inspector-container" class="d-flex flex-column justify-content-between h-100">
+            <div id="control-container" class="inspector-segment d-flex justify-content-center">
+                <div class="d-flex justify-content-between p-3 my-auto" style="width: 60%">
+                    <div id="slider-container" class="d-flex flex-column">
+                        <label for="speed-slider" class="mx-auto">Speed: <span id="speed-value">1</span>x</label>
+                        <input type="range" class="form-range" id="speed-slider" min="1" max="10" step="1" value="1" />
                     </div>
-                    <div id="field-container" class="w-50 d-flex flex-column">
-                        <h2 class="text-center">Field</h2>
-                        <div id="field-list-container" class="flex-fill">
+                    <button class="btn btn-lg btn-play" id="play-button">Play</button>
+                    <button class="btn btn-lg btn-step" id="step-button">Step</button>
+                </div>
+            </div>
+            <div id="settlement-container" class="inspector-segment h-100 d-flex">
+                <div id="garrison-container" class="w-50 ps-2 d-flex flex-column">
+                    <h2>Garrison <span id="inspector-settlement-name" class="h4"></span></h2>
+                    <div id="garrison-list">
 
-                        </div>
                     </div>
                 </div>
+                <div id="field-container" class="w-auto ps-2 d-flex flex-column">
+                    <h2>Field</h2>
+                    <div id="field-list">
+
+                    </div>
+                </div>
+            </div>
+            <div id="kingdom-info-container" class="inspector-segment h-100 d-flex">
+                <div id="kingdom-selector" class="w-50">
+                    <ul id="kingdom-list" class="list-group">
+
+                    </ul>
+                </div>
+                <div id="kingdom-info" class="w-50">
+
+                </div>
+            </div>
+            <div id="event-log-container" class="inspector-segment h-100">
+                <ul id="notification-list">
+
+                </ul>
             </div>
         </div>
     </main>

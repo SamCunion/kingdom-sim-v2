@@ -6,8 +6,9 @@ import _ from "lodash";
 import Castle from "./Castle";
 import City from "./City";
 import Kingdom from "./Kingdom";
-import { Utility } from "./lib/SRL";
+import { Utility } from "./lib/TSRL";
 import War from "./War";
+import Inspector from "./Inspector";
 
 export default class WarHandler {
 
@@ -51,6 +52,7 @@ export default class WarHandler {
         k2.wars.push(war);
         //add the war to the classes war array
         this.wars.push(war);
+        Inspector.logNewMessage(`${k1.name} declared war on ${k2.name} over ${reason_text}.`);
         //display to console
         console.log(`%c${k1.name}%c declared war on %c${k2.name}%c over ${reason_text}.`, `color:${k1.colour};font-size:20px;font-weight:bolder;`, `color:black;font-size:15px;`, `color:${k2.colour};font-size:20px;font-weight:bolder;`, `color:black;font-size:15px;`);
         console.log(`%c${k1.name}%c is now at war with ${k1.wars.length} kingdoms.`, `color:${k1.colour};`, "color: black");
@@ -77,9 +79,23 @@ export default class WarHandler {
             w.kingdoms[1].current_target.besieged = false;
             w.kingdoms[1].current_target = null;
         }
+        //free lords
+        for (let l of w.kingdoms[0].lords) {
+            if (l.imprisoned_by == w.kingdoms[1]) { //free
+                l.imprisoned_by = null;
+                l.imprison_duration = 0;
+            }
+        }
+        for (let l of w.kingdoms[1].lords) {
+            if (l.imprisoned_by == w.kingdoms[0]) { //free
+                l.imprisoned_by = null;
+                l.imprison_duration = 0;
+            }
+        }
         Utility.array.removeItem(this.wars, w);
         Utility.array.removeItem(w.kingdoms[0].wars, w);
         Utility.array.removeItem(w.kingdoms[1].wars, w);
+        Inspector.logNewMessage(`${w.kingdoms[0].name} made peace with ${w.kingdoms[1].name}`);
         //log to console
         console.log(`%c${w.kingdoms[0].name}%c made peace with %c${w.kingdoms[1].name}`, `color:${w.kingdoms[0].colour};font-size:20px`, `color:silver;font-size:15px;`, `color:${w.kingdoms[1].colour};font-size:20px;font-weight:bolder;`);
         console.log(`%c${w.kingdoms[0].name}%c is now at war with ${w.kingdoms[0].wars.length} kingdoms.`, `color:${w.kingdoms[0].colour};`, "color: black");

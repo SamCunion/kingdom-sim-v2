@@ -2,8 +2,8 @@
  * Cities are settlements that can be sieged and can act as home bases of lords without a castle or city of their own.
  */
 import Kingdom from "./Kingdom";
-import { Scene, Utility, Vector2 } from "./lib/SRL";
-import { EngineInfo } from "./lib/SRL/Engine";
+import { Scene, Utility, Vector2 } from "./lib/TSRL";
+import { EngineInfo } from "./lib/TSRL/Engine";
 import Settlement from "./Settlement";
 
 export default class City extends Settlement {

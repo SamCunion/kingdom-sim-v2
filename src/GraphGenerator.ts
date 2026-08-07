@@ -2,7 +2,7 @@ import Battlefield from "./Battlefield";
 import Castle from "./Castle";
 import City from "./City";
 import Kingdom from "./Kingdom";
-import {Scene, Utility, Vector2} from "./lib/SRL";
+import {Scene, Utility, Vector2} from "./lib/TSRL";
 import Settlement from "./Settlement";
 
 export default class GraphGenerator {

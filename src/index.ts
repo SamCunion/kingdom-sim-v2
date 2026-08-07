@@ -5,8 +5,9 @@
 import Castle from "./Castle";
 import City from "./City";
 import GraphGenerator from "./GraphGenerator";
+import Inspector from "./Inspector";
 import Kingdom from "./Kingdom";
-import {Engine, Scene, Utility} from "./lib/SRL";
+import {Engine, Scene, Utility} from "./lib/TSRL";
 import Lord, { LordBehaviour } from "./Lord";
 import Settlement from "./Settlement";
 import WarHandler from "./WarHandler";
@@ -53,9 +54,9 @@ class Main {
         //number of castles each kingdom could have
         const no_castles = [3]; //[3, 4];
         //width of the display
-        const WINDOW_W = 1200;
+        const WINDOW_W = window.innerWidth * 0.6;//1200;
         //height of the display
-        const WINDOW_H = 900;
+        const WINDOW_H = window.innerHeight;//900;
         //graph generator seed
         const GRAPH_SEED = Math.random();
         //==================================
@@ -159,9 +160,7 @@ class Main {
         engine.Run();
 
         //start the "game loop"
-        const TIME_BETWEEN_REEVALUATIONS = 200;
-        const ACTION_LOOP = setInterval(() => {
-
+        Inspector.Init(kingdoms, () => {
             //lord actions
             const lords = Lord.getLords();
             for (let i = 0; i < lords.length; i++) {
@@ -198,7 +197,7 @@ class Main {
                         //calculate fatalities
                         let percentage_of_total_killed = Utility.random.randInt(10, 15, true);
                         let n_killed_total = Math.ceil((percentage_of_total_killed / 100) * (side_a_sum + side_b_sum));
-                        
+
                         //for each fatality
                         for (let i = 0; i < n_killed_total; i++) {
                             //determine which side the fatality should be on
@@ -241,6 +240,9 @@ class Main {
                                         l.moveTo(destination);
                                     }
                                     l.enterSettlement();
+                                    if (l.is_king) {
+                                        Inspector.logNewMessage(`${l.name} of ${l.getKingdom().name} was defeated in battle but managed to escape!`);
+                                    }
                                     console.log(`${l.name} has been defeated in battle but managed to escape.`);
                                 }
                                 else { //gulag
@@ -251,6 +253,9 @@ class Main {
                                     }
                                     else {
                                         l.imprisoned_by = side_a_lords[0].getKingdom();
+                                    }
+                                    if (l.is_king) {
+                                        Inspector.logNewMessage(`${l.name} of ${l.getKingdom().name} has been taken prisoner by ${l.imprisoned_by.name}!`);
                                     }
                                     console.log(`${l.name} has been taken prisoner`);
                                 }
@@ -264,7 +269,7 @@ class Main {
 
             //update wars
             WAR_HANDLER.Step();
-        }, TIME_BETWEEN_REEVALUATIONS);
+        })
     }
 
     /**

@@ -1,7 +1,7 @@
 /**
  * A castle is like a city, but has less defences and lower overall value.
  */
-import { Scene, Utility, Vector2 } from "./lib/SRL";
+import { Scene, Utility, Vector2 } from "./lib/TSRL";
 import Settlement from "./Settlement";
 
 

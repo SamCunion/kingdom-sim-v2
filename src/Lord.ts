@@ -1,7 +1,8 @@
 import Battlefield from "./Battlefield";
 import { Connection } from "./GraphGenerator";
+import Inspector from "./Inspector";
 import Kingdom from "./Kingdom";
-import { Utility } from "./lib/SRL";
+import { Utility } from "./lib/TSRL";
 import Settlement from "./Settlement";
 import _ from "lodash";
 
@@ -56,6 +57,10 @@ export default class Lord {
 
         //check if freshly released
         if (state !== LordBehaviour.IMPRISONED && this.behaviour_state == LordBehaviour.IMPRISONED) {
+            this.imprisoned_by = null;
+            if (this.is_king) {
+                Inspector.logNewMessage(`${this.name} of ${this.kingdom.name} was released from captivity.`);
+            }
             //check if kingdom still exists
             if (this.kingdom.getOwnedSettlements().length > 0) {
                 //return to a random friendly settlement

@@ -3,7 +3,7 @@
  */
 
 import Kingdom from "./Kingdom";
-import { Utility } from "./lib/SRL";
+import { Utility } from "./lib/TSRL";
 
 export default class War {
 
