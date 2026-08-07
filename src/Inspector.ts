@@ -21,6 +21,7 @@ export default class Inspector {
     private static speed_value: HTMLSpanElement = document.querySelector("#speed-value")!;
     private static play_button: HTMLButtonElement = document.querySelector("#play-button")!;
     private static step_button: HTMLButtonElement = document.querySelector("#step-button")!;
+    private static seed_display: HTMLAnchorElement = document.querySelector("#seed-display")!;
 
     //settlement inspector
     private static garrison_container: HTMLDivElement = document.querySelector("#garrison-container")!;
@@ -40,6 +41,7 @@ export default class Inspector {
     public static readonly step_duration_default: number = 1000;
 
     private static state: SimState = SimState.PAUSED;
+    private static seed: number;
     private static current_settlement: Settlement|null = null;
     private static kingdoms: Kingdom[] = [];
     private static current_kingdom: Kingdom|null = null;
@@ -47,14 +49,25 @@ export default class Inspector {
     private static notification_count: number = 0;
     private static readonly notification_max: number = 50;
 
-    public static Init(kingdoms: Kingdom[], new_step_callback: CallableFunction): void {
+    public static Init(kingdoms: Kingdom[], seed: number, new_step_callback: CallableFunction): void {
         //reset slider to remove browser memory
         this.speed_slider.value = "1";
+
+        //display seed
+        this.seed_display.innerHTML = seed.toString();
+        this.seed = seed;
 
         //bind kingdoms
         this.kingdoms = kingdoms;
 
         //attach events
+        this.seed_display.addEventListener("click", () => {
+            navigator.clipboard.writeText(location.origin + location.pathname + "?seed=" + this.seed);
+            this.seed_display.innerHTML = "Copied!";
+        });
+        this.seed_display.addEventListener("mouseleave", () => {
+            this.seed_display.innerHTML = this.seed.toString();
+        })
         this.speed_slider.addEventListener("input", () => {
             this.onSpeedSliderChange(Number(this.speed_slider.value));
         })
@@ -250,7 +263,7 @@ export default class Inspector {
         $(this.garrison_list).empty();
 
         if (s.node_id !== "battlefield") { //has garrison
-            $(this.garrison_container).show();
+            $(this.garrison_container).removeClass("d-none");
             this.inspector_settlement_name.innerHTML = `(${s.name})`;
             if (s.besieged) {
                 $(this.inspector_settlement_name).css({
@@ -283,7 +296,7 @@ export default class Inspector {
             $(this.garrison_list).append(container);
         }
         else {
-            $(this.garrison_container).hide();
+            $(this.garrison_container).addClass("d-none");
         }
 
         //build field list
@@ -291,10 +304,12 @@ export default class Inspector {
         //catalogue the field lords by kingdom
         let field_lords: any = {};
         for (let lord of s.field_lords) {
-            if (!field_lords[lord.getKingdom().name]) {
-                field_lords[lord.getKingdom().name] = [];
+            if (lord.behaviour_state !== 5) {
+                if (!field_lords[lord.getKingdom().name]) {
+                    field_lords[lord.getKingdom().name] = [];
+                }
+                field_lords[lord.getKingdom().name].push(lord);
             }
-            field_lords[lord.getKingdom().name].push(lord);
         }
 
         for (let k_name of Object.keys(field_lords)) {

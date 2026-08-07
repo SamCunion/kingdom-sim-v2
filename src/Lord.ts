@@ -1,5 +1,4 @@
 import Battlefield from "./Battlefield";
-import { Connection } from "./GraphGenerator";
 import Inspector from "./Inspector";
 import Kingdom from "./Kingdom";
 import { Utility } from "./lib/TSRL";
@@ -69,7 +68,7 @@ export default class Lord {
                 }
                 let s = Utility.random.randItem(this.kingdom.getOwnedSettlements());
                 if (this.location !== s) {
-                    this.moveTo(s);
+                    this.moveTo(s, false);
                 }
                 this.enterSettlement();
             }
@@ -164,18 +163,26 @@ export default class Lord {
 
                 //lord is not in immediate danger, check if there are any favorable fights to join on adjoining vectors
                 let war_kingdoms = this.kingdom.getKingdomsAtWar();
+                let moved = false;
                 for (let v of this.location.getConnections()) {
                     //check if there is infact enemies on that vector
+                    if (moved) {
+                        break;
+                    }
                     for (let l of v.settlement2.field_lords) {
-                        if (war_kingdoms.includes(l.getKingdom())) {
+                        if (war_kingdoms.includes(l.getKingdom()) && l.behaviour_state !== LordBehaviour.IMPRISONED) {
                             //there are enemies on this vector
                             if (this.checkFightWorthJoining(v.settlement2)) {
                                 //its worth joining, so join it.
                                 this.moveTo(v.settlement2);
+                                moved = true;
                                 break;
                             }
                         }
                     }
+                }
+                if (moved) {
+                    break;
                 }
 
                 //no danger or favorable fights to join, move towards a random enemy settlement
@@ -214,18 +221,26 @@ export default class Lord {
 
                 //lord is not in immediate danger, check if there are any favorable fights to join on adjoining vectors
                 let war_kingdoms = this.kingdom.getKingdomsAtWar();
+                let moved = false;
                 for (let v of this.location.getConnections()) {
                     //check if there is infact enemies on that vector
+                    if (moved) {
+                        break;
+                    }
                     for (let l of v.settlement2.field_lords) {
-                        if (war_kingdoms.includes(l.getKingdom())) {
+                        if (war_kingdoms.includes(l.getKingdom()) && l.behaviour_state !== LordBehaviour.IMPRISONED) {
                             //there are enemies on this vector
                             if (this.checkFightWorthJoining(v.settlement2)) {
                                 //its worth joining, so join it.
                                 this.moveTo(v.settlement2);
+                                moved = true;
                                 break;
                             }
                         }
                     }
+                }
+                if (moved) {
+                    break;
                 }
 
                 //otherwise, path towards campaign target
@@ -241,7 +256,9 @@ export default class Lord {
                 //if the current settlement isnt already besieged, set it so
                 if (!this.location.besieged) {
                     this.location.besieged = true;
+                    Inspector.logNewMessage(`${this.location.name} has been besieged by ${this.kingdom.name}!`);
                 }
+                break;
             }
             
             case LordBehaviour.IMPRISONED: {
@@ -265,7 +282,7 @@ export default class Lord {
                 //if on same node as an enemy, transition to BATTLE state
                 let wars = this.kingdom.getKingdomsAtWar();
                 for (let l of this.location.field_lords) {
-                    if (wars.includes(l.getKingdom())) {
+                    if (l.behaviour_state !== LordBehaviour.IMPRISONED && wars.includes(l.getKingdom())) {
                         return LordBehaviour.BATTLE;
                     }
                 }
@@ -288,7 +305,7 @@ export default class Lord {
                 //if on same node as an enemy, transition to BATTLE state
                 let wars = this.kingdom.getKingdomsAtWar();
                 for (let l of this.location.field_lords) {
-                    if (wars.includes(l.getKingdom())) {
+                    if (l.behaviour_state !== LordBehaviour.IMPRISONED && wars.includes(l.getKingdom())) {
                         return LordBehaviour.BATTLE;
                     }
                 }
@@ -311,7 +328,7 @@ export default class Lord {
                 //if on same node as an enemy, transition to BATTLE state
                 let wars = this.kingdom.getKingdomsAtWar();
                 for (let l of this.location.field_lords) {
-                    if (wars.includes(l.getKingdom())) {
+                    if (l.behaviour_state !== LordBehaviour.IMPRISONED && wars.includes(l.getKingdom())) {
                         return LordBehaviour.BATTLE;
                     }
                 }
@@ -339,7 +356,7 @@ export default class Lord {
                 //if on same node as an enemy, continue in BATTLE state
                 let wars = this.kingdom.getKingdomsAtWar();
                 for (let l of this.location.field_lords) {
-                    if (wars.includes(l.getKingdom())) {
+                    if (l.behaviour_state !== LordBehaviour.IMPRISONED && wars.includes(l.getKingdom())) {
                         return LordBehaviour.BATTLE;
                     }
                 }
@@ -367,7 +384,7 @@ export default class Lord {
                 //if in same settlement as an enemy, transition to BATTLE state
                 let wars = this.kingdom.getKingdomsAtWar();
                 for (let l of this.location.field_lords) {
-                    if (wars.includes(l.getKingdom())) {
+                    if (l.behaviour_state !== LordBehaviour.IMPRISONED && wars.includes(l.getKingdom())) {
                         return LordBehaviour.BATTLE;
                     }
                 }
@@ -453,22 +470,25 @@ export default class Lord {
     /**
      * Moves the lord to a new settlement
      * @param settlement the new settlement the lord is being moved to
+     * @param show_transition_particle whether to show the transition particle visual (default true)
      * @returns true if the operation was successful, else false
      */
-    public moveTo(settlement: Settlement): boolean {
-        if (this.location === settlement) {
+    public moveTo(settlement: Settlement, show_transition_particle = true): boolean {
+        if (this.location == settlement) {
             console.error("Unable to move the lord as they are currently at the settlement they wish to move to!", this.location, this);
             return false;
         }
         else if (this.location) {
-            if (this.location.garrison_lords.includes(this)) {
+            if (!this.in_field) {
                 console.error("Unable to move the lord, as they are currently inside a settlement!", this.location, this);
                 return false;
             }
             //remove the lord from their current location first
             Utility.array.removeItem(this.location.field_lords, this);
             //show the transition animation
-            this.location.addTransitionParticle(this, settlement);
+            if (show_transition_particle) {
+                this.location.addTransitionParticle(this, settlement);
+            }
         }
         //then add them to the new settlement
         this.location = settlement;
@@ -488,7 +508,7 @@ export default class Lord {
 
         //current node (only need to check allies, as if there were enemies, there would already be a battle)
         for (let l of this.location.field_lords) {
-            if (l.getKingdom() == this.getKingdom()) {
+            if (l.getKingdom() == this.getKingdom() && l.behaviour_state !== LordBehaviour.IMPRISONED) {
                 ally_sum += l.warband_size;
             }
         }
@@ -497,10 +517,10 @@ export default class Lord {
         for (let v of this.location.getConnections()) {
             let location = v.settlement2;
             for (let l of location.field_lords) {
-                if (l.getKingdom() == this.getKingdom()) {
+                if (l.getKingdom() == this.getKingdom() && l.behaviour_state !== LordBehaviour.IMPRISONED) {
                     ally_sum += l.warband_size;
                 }
-                else if (war_kingdoms.includes(l.getKingdom())) {
+                else if (war_kingdoms.includes(l.getKingdom()) && l.behaviour_state !== LordBehaviour.IMPRISONED) {
                     enemy_sum += l.warband_size;
                 }
             }
@@ -526,17 +546,17 @@ export default class Lord {
 
         //check allies on current node
         for (let l of this.location.field_lords) {
-            if (l.getKingdom() == this.getKingdom()) {
+            if (l.getKingdom() == this.getKingdom() && l.behaviour_state !== LordBehaviour.IMPRISONED) {
                 ally_sum += l.warband_size;
             }
         }
 
         //check target
         for (let l of target.field_lords) {
-            if (l.getKingdom() == this.getKingdom()) {
+            if (l.getKingdom() == this.getKingdom() && l.behaviour_state !== LordBehaviour.IMPRISONED) {
                 ally_sum += l.warband_size;
             }
-            else if (war_kingdoms.includes(l.getKingdom())) {
+            else if (war_kingdoms.includes(l.getKingdom()) && l.behaviour_state !== LordBehaviour.IMPRISONED) {
                 enemy_sum += l.warband_size;
             }
         }

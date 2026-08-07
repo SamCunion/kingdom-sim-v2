@@ -25,6 +25,11 @@
         #control-container {
             min-height: 10%;
         }
+        #seed-display {
+            cursor: pointer;
+            user-select: none;
+            -moz-user-select: none;
+        }
         #garrison-container {
             border-right: 5px ridge rgb(255, 157, 0);
         }
@@ -97,7 +102,11 @@
         </div>
         <div id="inspector-container" class="d-flex flex-column justify-content-between h-100">
             <div id="control-container" class="inspector-segment d-flex justify-content-center">
-                <div class="d-flex justify-content-between p-3 my-auto" style="width: 60%">
+                <div class="d-flex justify-content-between p-3 my-auto" style="width: 80%">
+                    <div id="seed-container" class="d-flex flex-column text-center">
+                        <p class="m-0">Seed:</p>
+                        <a class="m-0" id="seed-display"></a>
+                    </div>
                     <div id="slider-container" class="d-flex flex-column">
                         <label for="speed-slider" class="mx-auto">Speed: <span id="speed-value">1</span>x</label>
                         <input type="range" class="form-range" id="speed-slider" min="1" max="10" step="1" value="1" />

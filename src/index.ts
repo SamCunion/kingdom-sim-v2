@@ -58,7 +58,9 @@ class Main {
         //height of the display
         const WINDOW_H = window.innerHeight;//900;
         //graph generator seed
-        const GRAPH_SEED = Math.random();
+        let params = new URLSearchParams(window.location.search);
+        //use provided seed, otherwise use random seed.
+        const GRAPH_SEED = typeof (params.get("seed")) == "string" ? Number(params.get("seed")) : Math.floor(Math.random() * 100000000);;
         //==================================
 
         let engine = new Engine(document.querySelector("#app-container")!);
@@ -160,7 +162,7 @@ class Main {
         engine.Run();
 
         //start the "game loop"
-        Inspector.Init(kingdoms, () => {
+        Inspector.Init(kingdoms, GRAPH_SEED, () => {
             //lord actions
             const lords = Lord.getLords();
             for (let i = 0; i < lords.length; i++) {
@@ -184,11 +186,11 @@ class Main {
                         let side_b_lords = [];
                         let side_b_sum = 0;
                         for (let l of s.field_lords) {
-                            if (l.getKingdom() == w.kingdoms[0]) {
+                            if (l.behaviour_state !== LordBehaviour.IMPRISONED && l.getKingdom() == w.kingdoms[0]) {
                                 side_a_lords.push(l);
                                 side_a_sum += l.warband_size;
                             }
-                            else if (l.getKingdom() == w.kingdoms[1]) {
+                            else if (l.behaviour_state !== LordBehaviour.IMPRISONED && l.getKingdom() == w.kingdoms[1]) {
                                 side_b_lords.push(l);
                                 side_b_sum += l.warband_size;
                             }
@@ -200,6 +202,10 @@ class Main {
 
                         //for each fatality
                         for (let i = 0; i < n_killed_total; i++) {
+                            //is one side completely depleated?
+                            if (side_a_sum == 0 || side_b_sum == 0) {
+                                break;
+                            }
                             //determine which side the fatality should be on
                             let randval = Utility.random.randInt(0, side_a_sum + side_b_sum, true);
                             if (randval > side_a_sum) {
@@ -237,7 +243,7 @@ class Main {
                                 if (Math.random() < 0.5) { //escape
                                     let destination = Utility.random.randItem(l.getKingdom().getOwnedSettlements());
                                     if (destination !== l.location) {
-                                        l.moveTo(destination);
+                                        l.moveTo(destination, false);
                                     }
                                     l.enterSettlement();
                                     if (l.is_king) {
