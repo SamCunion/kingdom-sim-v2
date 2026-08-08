@@ -60,7 +60,7 @@ class Main {
         //graph generator seed
         let params = new URLSearchParams(window.location.search);
         //use provided seed, otherwise use random seed.
-        const GRAPH_SEED = typeof (params.get("seed")) == "string" ? Number(params.get("seed")) : Math.floor(Math.random() * 100000000);;
+        const GRAPH_SEED = typeof (params.get("seed")) == "string" ? Number(params.get("seed")) : Math.floor(Math.random() * 100000000);
         //==================================
 
         let engine = new Engine(document.querySelector("#app-container")!);
@@ -174,7 +174,7 @@ class Main {
             for (let s of Settlement.getSettlements()) {
                 let active_kingdoms: Kingdom[] = [];
                 for (let l of s.field_lords) {
-                    if (!active_kingdoms.includes(l.getKingdom())) {
+                    if (!active_kingdoms.includes(l.getKingdom()) && l.behaviour_state !== LordBehaviour.IMPRISONED) {
                         active_kingdoms.push(l.getKingdom());
                     }
                 }
@@ -252,8 +252,11 @@ class Main {
                                     console.log(`${l.name} has been defeated in battle but managed to escape.`);
                                 }
                                 else { //gulag
-                                    l.imprison_duration = 50;
+                                    l.imprison_duration = Utility.random.randInt(Lord.IMPRISON_DURATION_RANGE[0], Lord.IMPRISON_DURATION_RANGE[1], true);
                                     l.behaviour_state = LordBehaviour.IMPRISONED;
+                                    if (!side_a_lords[0] || !side_b_lords[0]) {
+                                        console.log(side_a_lords, side_b_lords);
+                                    }
                                     if (side_a_lords[0].getKingdom() == l.getKingdom()) {
                                         l.imprisoned_by = side_b_lords[0].getKingdom();
                                     }
@@ -272,6 +275,227 @@ class Main {
             }
 
             //siege calculations
+            for (let s of Settlement.getSettlements()) {
+                if (s.besieged) {
+                    //check if there are still enemy lords in the field
+                    let siege_valid = false;
+                    let war_kingdoms = s.getKingdom()!.getKingdomsAtWar();
+                    for (let l of s.field_lords) {
+                        if (war_kingdoms.includes(l.getKingdom())) {
+                            siege_valid = true;
+                            break;
+                        }
+                    }
+                    if (siege_valid) {
+                        if (s.besieged_duration > s.siege_duration) {
+                            /**
+                             * take all lords in field that are of enemy type, sum their power
+                             * take all lords in garrison + garrison, sum their power then multiply by 1.25.
+                             * each "assault" should kill between 50-100 troops.
+                             * if garrison reaches 0, transition settlement to a random attacking kingdom that was part of the attack + replenish garison
+                             * if sieging kingdoms reaches 0, replenish garrison by 50-100, up to a maximum. End the siege.
+                             * if that was a kingdoms last settlement, call kingdom.defeat() to clean up the kingdom.
+                             */
+
+                            //do a siege calculation
+                            let assault_fatalities = Utility.random.randInt(50, 100);
+                            let attacker_sum = 0;
+                            let defender_sum = s.garrison;
+                            let attacker_power = 0;
+                            let defender_power = s.garrison;
+                            let attacker_lords = [];
+                            let defender_lords = [];
+                            let settlement_kingdom = s.getKingdom()!;
+                            for (let l of s.field_lords) {
+                                if (l.behaviour_state == LordBehaviour.SIEGE) {
+                                    attacker_power += l.warband_size;
+                                    attacker_sum += l.warband_size;
+                                    attacker_lords.push(l);
+                                }
+                            }
+                            for (let l of s.garrison_lords) {
+                                defender_power += l.warband_size;
+                                defender_sum += l.warband_size;
+                                defender_lords.push(l);
+                            }
+                            defender_power *= s.siege_defender_power_multiplier;
+
+                            //for each fatality
+                            for (let i = 0; i < assault_fatalities; i++) {
+                                //is one side completely depleated?
+                                if (attacker_sum == 0 || defender_sum == 0) {
+                                    break;
+                                }
+                                //determine which side the fatality should be on
+                                let randval = Utility.random.randInt(0, attacker_power + defender_power, true);
+                                if (randval > attacker_power) {
+                                    //fatality on attackers
+                                    let randval = Utility.random.randInt(0, attacker_sum, true);
+                                    let sum = 0;
+                                    for (let a_l of attacker_lords) {
+                                        sum += a_l.warband_size;
+                                        if (sum >= randval) {
+                                            a_l.warband_size--;
+                                            attacker_sum--;
+                                            attacker_power--;
+                                            break;
+                                        }
+                                    }
+                                }
+                                else {
+                                    //fatality on defenders
+                                    let randval = Utility.random.randInt(0, defender_sum, true);
+                                    let sum = 0;
+                                    let garrison_fatality = true;
+                                    for (let b_l of defender_lords) {
+                                        sum += b_l.warband_size;
+                                        if (sum >= randval) {
+                                            b_l.warband_size--;
+                                            defender_sum--;
+                                            garrison_fatality = false;
+                                            break;
+                                        }
+                                    }
+                                    if (garrison_fatality) {
+                                        s.garrison--;
+                                        defender_sum--;
+                                    }
+                                }
+                            }
+
+                            //check siege end conditions
+                            if (defender_sum == 0) {
+                                //siege was successful
+                                Inspector.logNewMessage(`${attacker_lords[0].getKingdom().name} have taken ${s.name} from ${s.getKingdom()!.name}!`);
+                                s.besieged_duration = 0;
+                                s.besieged = false;
+
+                                //imprison defending lords
+                                for (let l of defender_lords) {
+                                    l.imprison_duration = Utility.random.randInt(Lord.IMPRISON_DURATION_RANGE[0], Lord.IMPRISON_DURATION_RANGE[1], true);
+                                    l.behaviour_state = LordBehaviour.IMPRISONED;
+                                    l.imprisoned_by = attacker_lords[0].getKingdom();
+                                    if (l.is_king) {
+                                        Inspector.logNewMessage(`${l.name} of ${l.getKingdom().name} has been taken prisoner by ${l.imprisoned_by.name}!`);
+                                    }
+                                    console.log(`${l.name} has been taken prisoner`);
+                                }
+
+                                //transfer settlement owner and restore garrison
+                                s.getKingdom()!.removeSettlement(s);
+                                attacker_lords[0].getKingdom().addSettlement(s);
+                                s.resetGarrison();
+                                //reset siege target for kingdoms with this settlement as their target
+                                for (let k of kingdoms) {
+                                    if (k.current_target == s) {
+                                        k.current_target = null;
+                                    }
+                                }
+
+                                //break attackers locked siege state
+                                for (let l of attacker_lords) {
+                                    l.behaviour_state = 0; //recover
+                                }
+
+                                if (settlement_kingdom.getOwnedSettlements().length == 0) { //settlement taken was the last of the kingdom. RIP kingdom.
+                                    Inspector.logNewMessage(`${settlement_kingdom.name} have been completely defeated!`);
+                                    settlement_kingdom.defeated = true;
+
+                                    //make peace in their wars
+                                    for (let w of [...settlement_kingdom!.wars]) {
+                                        WAR_HANDLER.makePeace(w);
+                                    }
+
+                                    //re-assign lords
+                                    for (let l of [...settlement_kingdom.lords]) {
+                                        if (l.is_king) {
+                                            //is the king
+                                            l.behaviour_state = 5;
+                                            l.imprison_duration = Infinity;
+                                            l.exitSettlement();
+                                            continue;
+                                        }
+                                        else {
+                                            while (true) {
+                                                let rand_kingdom = Utility.random.randItem(kingdoms);
+                                                if (rand_kingdom.defeated) {
+                                                    continue;
+                                                }
+                                                else {
+                                                    Utility.array.removeItem(l.getKingdom().lords, l);
+                                                    l.setKingdom(rand_kingdom);
+                                                    console.log(`assigned to ${l.getKingdom().name}`)
+                                                    //move them to a friendly place
+                                                    if (!l.in_field) {
+                                                        l.exitSettlement();
+                                                    }
+                                                    let rand_safe_place = Utility.random.randItem(l.getKingdom()!.getOwnedSettlements());
+                                                    if (rand_safe_place !== l.location) {
+                                                        l.moveTo(rand_safe_place, false);
+                                                    }
+                                                    l.enterSettlement();
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    //check if theres only one kingdom left
+                                    let kingdoms_left = 0;
+                                    for (let k of kingdoms) {
+                                        if (!k.defeated) {
+                                            kingdoms_left++;
+                                        }
+                                    }
+                                    if (kingdoms_left == 1) {
+                                        //we have a winner!
+                                        let winner = Settlement.getSettlements()[0].getKingdom()!;
+                                        Inspector.logNewMessage(`${winner.name} has defeated all other kingdoms! All hail ${winner.lords[0].name}!`);
+                                    }
+                                }
+                            }
+                            else if (attacker_sum == 0) {
+                                //siege was unsuccessful
+                                Inspector.logNewMessage(`${s.getKingdom()!.name} broke the siege of ${s.name}!`);
+                                s.besieged_duration = 0;
+                                s.besieged = false;
+
+                                //replenish some of the garrison
+                                s.resetGarrison();
+
+                                //escape or imprison attacking lords
+                                for (let l of attacker_lords) {
+                                    if (Math.random() < 0.5) { //escape
+                                        let destination = Utility.random.randItem(l.getKingdom().getOwnedSettlements());
+                                        if (destination !== l.location) {
+                                            l.moveTo(destination, false);
+                                        }
+                                        l.enterSettlement();
+                                        if (l.is_king) {
+                                            Inspector.logNewMessage(`${l.name} of ${l.getKingdom().name} was defeated in battle but managed to escape!`);
+                                        }
+                                        console.log(`${l.name} has been defeated in battle but managed to escape.`);
+                                    }
+                                    else { //gulag
+                                        l.imprison_duration = Utility.random.randInt(Lord.IMPRISON_DURATION_RANGE[0], Lord.IMPRISON_DURATION_RANGE[1], true);
+                                        l.behaviour_state = LordBehaviour.IMPRISONED;
+                                        l.imprisoned_by = s.getKingdom()!;
+                                        if (l.is_king) {
+                                            Inspector.logNewMessage(`${l.name} of ${l.getKingdom().name} has been taken prisoner by ${l.imprisoned_by.name}!`);
+                                        }
+                                        console.log(`${l.name} has been taken prisoner`);
+                                    }
+                                }
+                            }
+                        }
+                        s.besieged_duration++;
+                    }
+                    else {
+                        s.besieged = false;
+                        s.besieged_duration = 0;
+                    }
+                }
+            }
 
             //update wars
             WAR_HANDLER.Step();

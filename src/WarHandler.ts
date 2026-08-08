@@ -9,6 +9,7 @@ import Kingdom from "./Kingdom";
 import { Utility } from "./lib/TSRL";
 import War from "./War";
 import Inspector from "./Inspector";
+import { LordBehaviour } from "./Lord";
 
 export default class WarHandler {
 
@@ -84,12 +85,14 @@ export default class WarHandler {
             if (l.imprisoned_by == w.kingdoms[1]) { //free
                 l.imprisoned_by = null;
                 l.imprison_duration = 0;
+                l.behaviour_state = LordBehaviour.RECOVER;
             }
         }
         for (let l of w.kingdoms[1].lords) {
             if (l.imprisoned_by == w.kingdoms[0]) { //free
                 l.imprisoned_by = null;
                 l.imprison_duration = 0;
+                l.behaviour_state = LordBehaviour.RECOVER;
             }
         }
         Utility.array.removeItem(this.wars, w);
@@ -135,6 +138,9 @@ export default class WarHandler {
         //check war starts
         if (this.total_steps % this.CHECK_WAR_START_INTERVAL == 0) {
             for (let kingdom of this.kingdoms) {
+                if (kingdom.defeated) {
+                    continue;
+                }
                 let n_ongoing_wars = kingdom.wars.length;
                 let chance = 0.2 / Math.pow(2, n_ongoing_wars); //20% chance with no ongoing wars, 10% chance with 1 ongoing war, 5% chance with 2 ongoing wars etc.
                 if (chance > Math.random()) {
@@ -143,30 +149,31 @@ export default class WarHandler {
                         //the kingdom wants to start a war with either a super strong faction, or a pathetically weak one.
                         //as a result, higher probabilities for a war to start are indicated by distance from the mean
                         let fac_str_totals = [];
+                        let war_candidates = [];
                         for (let i = 0; i < this.kingdoms.length; i++) {
                             let k = this.kingdoms[i];
-                            if (k == kingdom) {
-                                fac_str_totals.push(0);
+                            if (k == kingdom || k.defeated) {
                                 continue;
                             }
                             let local_tot = 0;
                             let fiefs = k.getOwnedSettlements();
                             for (let f of fiefs) {
                                 if (f instanceof Castle) {
-                                    local_tot += 1; //castles are worth 1
+                                    local_tot += f.strategic_value; //castles are worth 1
                                 }
                                 else if (f instanceof City) {
-                                    local_tot += 2; //cities are worth 2
+                                    local_tot += f.strategic_value; //cities are worth 2
                                 }
                             }
                             fac_str_totals.push(local_tot);
+                            war_candidates.push(k);
                         }
                         let mean = _.mean(fac_str_totals);
                         let fac_weights = fac_str_totals.map((f_s) => Math.abs(f_s - mean));
                         let rand_val = Utility.random.randInt(0, _.sum(fac_weights));
                         let selected_index = 0;
                         let selected_total = 0;
-                        for (let i = 0; i < this.kingdoms.length; i++) {
+                        for (let i = 0; i < war_candidates.length; i++) {
                             let weight = fac_weights[i];
                             if (weight + selected_total > rand_val) {
                                 selected_index = i;
@@ -175,8 +182,8 @@ export default class WarHandler {
                             selected_total += weight;
                         }
 
-                        let war_decision = this.kingdoms[selected_index];
-                        if (!this.isAtWar(kingdom, war_decision) && kingdom !== war_decision) {
+                        let war_decision = war_candidates[selected_index];
+                        if (war_decision && !this.isAtWar(kingdom, war_decision) && kingdom !== war_decision) {
                             this.declareWar(kingdom, war_decision, "enemy strength");
                         }
 
@@ -185,7 +192,7 @@ export default class WarHandler {
                         for (let i = 0; i < 10; i++) {
                             let rand_settlement_seed = Utility.random.randItem(kingdom.getOwnedSettlements());
                             let choice = rand_settlement_seed.findRandom("external", kingdom);
-                            if (!this.isAtWar(kingdom, choice!.getKingdom()!)) {
+                            if (choice && !this.isAtWar(kingdom, choice!.getKingdom()!)) {
                                 this.declareWar(kingdom, choice!.getKingdom()!, "border friction");
                                 break;
                             }

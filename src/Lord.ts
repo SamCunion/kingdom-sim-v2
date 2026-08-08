@@ -12,6 +12,7 @@ export default class Lord {
 
     private readonly KING_CAPACITY_RANGE = [350, 350];
     private readonly LORD_CAPACITY_RANGE = [50, 300, 125, 50]; //min, max, mean, std dev
+    public static readonly IMPRISON_DURATION_RANGE = [50, 80]//minimum imprison duration, maximum imprison duration
     
     private static lords: Lord[] = [];
 
@@ -51,6 +52,11 @@ export default class Lord {
      * Called when its time for the lord to act. Determines the lord's best action to take this "turn" and then acts upon it.
      */
     public Act(): void {
+
+        if (this.kingdom.defeated) {
+            return;
+        }
+
         //get the current state
         let state = this.determineState();
 

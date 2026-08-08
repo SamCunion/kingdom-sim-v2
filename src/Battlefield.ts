@@ -4,6 +4,9 @@ import Settlement from "./Settlement";
 export default class Battlefield extends Settlement {
 
     public override node_id = "battlefield";
+    public override strategic_value: number = 0;
+    public override siege_duration: number = 0;
+    public override siege_defender_power_multiplier: number = 0;
 
     private static battlefields: Battlefield[] = [];
 

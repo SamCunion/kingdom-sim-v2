@@ -20,12 +20,16 @@ export default abstract class Settlement extends Component {
     public garrison_lords: Lord[] = []; //garrison lords are INSIDE the settlement, defending/resting. Must be lords of the same kingdom as the settlement.
     public field_lords: Lord[] = []; //field lords are OUTSIDE the settlement, can be lords of other kingdoms.
     public besieged: boolean = false;
+    public besieged_duration: number = 0;
     private routing_table = new Map<Settlement, Settlement[]>;
 
     //transition particle
     private transitions: TransitionData[] = [];
 
     public abstract node_id: string;
+    public abstract strategic_value: number;
+    public abstract siege_duration: number;
+    public abstract siege_defender_power_multiplier: number;
 
     private static settlements: Settlement[] = [];
 

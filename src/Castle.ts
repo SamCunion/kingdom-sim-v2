@@ -8,6 +8,9 @@ import Settlement from "./Settlement";
 export default class Castle extends Settlement {
 
     public override node_id = "castle";
+    public override strategic_value: number = 1;
+    public override siege_duration: number = 20;
+    public override siege_defender_power_multiplier: number = 1.25;
 
     private static castles: Castle[] = [];
 

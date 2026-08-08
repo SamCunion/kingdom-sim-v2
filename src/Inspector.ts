@@ -164,6 +164,7 @@ export default class Inspector {
 
         //add fields
         $(`<li>Kingdom name: ${kingdom.name}</li>`).appendTo(container); //kingdom name
+        $(`<li>Defeated: ${kingdom.defeated}</li>`).appendTo(container); //kingdom defeated status
         $(`<li>King name: ${kingdom.lords[0].name}</li>`).appendTo(container); //king name
         $(`<li>No. Lords: ${kingdom.lords.length}</li>`).appendTo(container); //lord count
         $(`<li>Current target: ${kingdom.current_target ? kingdom.current_target.name + ` (${kingdom.current_target.getKingdom()!.name})` : "None"}</li>`).appendTo(container); //current target
@@ -173,10 +174,10 @@ export default class Inspector {
         $(`<li>Wars: ${kingdom.wars.length} ${kingdom.wars.length > 0 ? "(" + kingdom.getKingdomsAtWar().map(k => k.name + ", ") + ")" : ""}</li>`).appendTo(container); //war info
         let strength = 0;
         for (let c of kingdom.getCities()) {
-            strength += 2;
+            strength += c.strategic_value;
         }
         for (let c of kingdom.getCastles()) {
-            strength += 1;
+            strength += c.strategic_value;
         }
         $(`<li>Kingdom strength: ${strength}</li>`).appendTo(container); //kingdom strength
 

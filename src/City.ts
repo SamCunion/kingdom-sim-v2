@@ -1,14 +1,15 @@
 /**
  * Cities are settlements that can be sieged and can act as home bases of lords without a castle or city of their own.
  */
-import Kingdom from "./Kingdom";
 import { Scene, Utility, Vector2 } from "./lib/TSRL";
-import { EngineInfo } from "./lib/TSRL/Engine";
 import Settlement from "./Settlement";
 
 export default class City extends Settlement {
 
     public override node_id = "city";
+    public override strategic_value: number = 5;
+    public override siege_duration: number = 50;
+    public override siege_defender_power_multiplier: number = 1.5;
 
     public readonly isCapital: boolean;
 
